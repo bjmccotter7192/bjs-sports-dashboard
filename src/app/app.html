@@ -4,13 +4,29 @@
       <span class="brand-icon">🏆</span>
       <span class="brand-title">BJ's Sports Dashboard</span>
     </div>
+
     <div class="navbar-links">
       <a routerLink="/last-played" routerLinkActive="active">Last Played</a>
       <a routerLink="/today" routerLinkActive="active">Today</a>
       <a routerLink="/schedule" routerLinkActive="active">Schedule</a>
     </div>
+
+    <button class="hamburger" (click)="toggleMenu()" [class.open]="menuOpen()" aria-label="Toggle menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
   </div>
 </nav>
+
+@if (menuOpen()) {
+  <div class="mobile-menu-overlay" (click)="closeMenu()"></div>
+  <div class="mobile-menu">
+    <a routerLink="/last-played" routerLinkActive="active" (click)="closeMenu()">Last Played</a>
+    <a routerLink="/today" routerLinkActive="active" (click)="closeMenu()">Today</a>
+    <a routerLink="/schedule" routerLinkActive="active" (click)="closeMenu()">Schedule</a>
+  </div>
+}
 
 <main class="main-content">
   <router-outlet />
