@@ -1,0 +1,23 @@
+<div class="view-header">
+  <div class="header-text">
+    <h1 class="view-title">Last Played</h1>
+    <span class="view-date">Most recent completed game per team · last 14 days</span>
+  </div>
+</div>
+
+<div class="teams-grid">
+  @for (entry of teamData(); track entry.team.abbreviation) {
+    <app-team-panel
+      [team]="entry.team"
+      [game]="entry.game"
+      [isLoading]="entry.isLoading"
+    />
+  }
+  @for (entry of seriesData(); track entry.series.sport) {
+    <app-motorsport-panel
+      [series]="entry.series"
+      [race]="entry.race"
+      [isLoading]="entry.isLoading"
+    />
+  }
+</div>

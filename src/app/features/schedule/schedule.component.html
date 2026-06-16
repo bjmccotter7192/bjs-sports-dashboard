@@ -1,0 +1,103 @@
+<div class="view-header">
+  <div class="header-text">
+    <h1 class="view-title">Upcoming Schedule</h1>
+    <span class="view-date">Next 30 days</span>
+  </div>
+</div>
+
+@if (isLoading()) {
+  <div class="loading-state">
+    @for (i of [1, 2, 3]; track i) {
+      <div class="skeleton-day">
+        <div class="skeleton skeleton-label"></div>
+        <div class="skeleton skeleton-row"></div>
+        <div class="skeleton skeleton-row"></div>
+      </div>
+    }
+  </div>
+} @else if (scheduleDays().length === 0) {
+  <div class="empty-state">
+    <span class="empty-icon">📭</span>
+    <p>No upcoming events found for your teams.</p>
+  </div>
+} @else {
+  <div class="schedule-list">
+    @for (day of scheduleDays(); track day.dateKey) {
+      <div class="schedule-day">
+        <div class="day-header">
+          <span class="day-label">{{ day.dateLabel }}</span>
+          <span class="game-count">{{ day.items.length }} event{{ day.items.length !== 1 ? 's' : '' }}</span>
+        </div>
+
+        <div class="day-games">
+          @for (item of day.items; track item.kind === 'game' ? item.game.id + item.team.abbreviation : item.race.id + item.series.sport) {
+
+            @if (item.kind === 'game') {
+              <div
+                class="game-row"
+                [style.--primary]="item.team.primaryColor"
+                [style.--secondary]="item.team.secondaryColor"
+              >
+                <div class="team-info">
+                  <span class="sport-dot" [style.background]="item.team.primaryColor"></span>
+                  <span class="my-team-label">{{ item.team.shortName }}</span>
+                  <span class="sport-tag">{{ item.team.sport.split('/')[1].toUpperCase() }}</span>
+                </div>
+
+                <div class="game-matchup">
+                  <img [src]="item.game.awayTeam.logo" [alt]="item.game.awayTeam.abbreviation" class="mini-logo" />
+                  <span class="matchup-text">
+                    {{ item.game.awayTeam.abbreviation }} @ {{ item.game.homeTeam.abbreviation }}
+                  </span>
+                  <img [src]="item.game.homeTeam.logo" [alt]="item.game.homeTeam.abbreviation" class="mini-logo" />
+                </div>
+
+                <div class="game-meta">
+                  <span class="game-time">{{ item.game.date | date: 'h:mm a' }}</span>
+                  @if (item.game.broadcast) {
+                    <span class="game-broadcast">{{ item.game.broadcast }}</span>
+                  }
+                </div>
+
+                @if (item.game.venue) {
+                  <div class="game-venue">{{ item.game.venue }}</div>
+                }
+              </div>
+            }
+
+            @if (item.kind === 'race') {
+              <div
+                class="game-row race-row"
+                [style.--primary]="item.series.primaryColor"
+                [style.--secondary]="item.series.secondaryColor"
+              >
+                <div class="team-info">
+                  <span class="sport-dot" [style.background]="item.series.primaryColor"></span>
+                  <span class="my-team-label">{{ item.series.shortName }}</span>
+                  <span class="sport-tag">RACE</span>
+                </div>
+
+                <div class="race-matchup">
+                  <span class="race-flag">🏁</span>
+                  <span class="matchup-text">{{ item.race.name }}</span>
+                </div>
+
+                <div class="game-meta">
+                  <span class="game-time">{{ item.race.date | date: 'h:mm a' }}</span>
+                  @if (item.race.broadcast) {
+                    <span class="game-broadcast">{{ item.race.broadcast }}</span>
+                  }
+                </div>
+
+                @if (item.race.venue) {
+                  <div class="game-venue">{{ item.race.venue }}</div>
+                }
+              </div>
+            }
+
+          }
+        </div>
+      </div>
+    }
+  </div>
+}

@@ -1,0 +1,78 @@
+<div
+  class="panel"
+  [style.--primary]="team().primaryColor"
+  [style.--secondary]="team().secondaryColor"
+>
+  <div class="panel-header">
+    <span class="sport-badge">{{ sportLabel() }}</span>
+    <span class="team-name">{{ team().shortName }}</span>
+    @if (isWin()) {
+      <span class="result-badge win">W</span>
+    } @else if (isLoss()) {
+      <span class="result-badge loss">L</span>
+    } @else if (isLive()) {
+      <span class="result-badge live">
+        <span class="live-dot"></span>LIVE
+      </span>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <div class="panel-body loading">
+      <div class="skeleton"></div>
+    </div>
+  } @else if (!game()) {
+    <div class="panel-body no-game">
+      <span class="no-game-icon">📅</span>
+      <span class="no-game-text">No game scheduled</span>
+    </div>
+  } @else {
+    <div class="panel-body">
+      <div class="matchup">
+        <div class="team-side my-team" [class.winner]="isWin()" [class.loser]="isLoss()">
+          <img
+            [src]="myTeam()?.logo"
+            [alt]="team().name"
+            class="team-logo"
+            loading="lazy"
+          />
+          <span class="team-abbr">{{ myTeam()?.abbreviation }}</span>
+          @if (showScore()) {
+            <span class="score my-score">{{ myTeam()?.score }}</span>
+          }
+        </div>
+
+        <div class="vs-block">
+          <span class="at-vs">{{ myTeamSide() === 'home' ? 'vs' : '@' }}</span>
+          <span class="game-status" [class.live]="isLive()" [class.pre]="isPre()">
+            @if (isLive() && game()?.status?.clock) {
+              {{ game()?.status?.period }}Q &nbsp;{{ game()?.status?.clock }}
+            } @else {
+              {{ game()?.status?.detail }}
+            }
+          </span>
+          @if (game()?.broadcast) {
+            <span class="broadcast">{{ game()?.broadcast }}</span>
+          }
+        </div>
+
+        <div class="team-side opp-team" [class.winner]="opponent()?.isWinner && game()?.status?.state === 'post'">
+          @if (showScore()) {
+            <span class="score opp-score">{{ opponent()?.score }}</span>
+          }
+          <span class="team-abbr">{{ opponent()?.abbreviation }}</span>
+          <img
+            [src]="opponent()?.logo"
+            [alt]="opponent()?.displayName"
+            class="team-logo"
+            loading="lazy"
+          />
+        </div>
+      </div>
+
+      @if (game()?.venue) {
+        <div class="venue">📍 {{ game()?.venue }}</div>
+      }
+    </div>
+  }
+</div>

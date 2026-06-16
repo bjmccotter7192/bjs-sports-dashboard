@@ -1,0 +1,61 @@
+<div
+  class="panel"
+  [style.--primary]="series().primaryColor"
+  [style.--secondary]="series().secondaryColor"
+>
+  <div class="panel-header">
+    <span class="sport-badge">{{ seriesLabel() }}</span>
+    <span class="series-name">{{ series().shortName }}</span>
+    @if (isLive()) {
+      <span class="result-badge live">
+        <span class="live-dot"></span>LIVE
+      </span>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <div class="panel-body loading">
+      <div class="skeleton"></div>
+    </div>
+  } @else if (!race()) {
+    <div class="panel-body no-race">
+      <span class="no-race-icon">🏁</span>
+      <span class="no-race-text">No race data</span>
+    </div>
+  } @else {
+    <div class="panel-body">
+      <div class="race-state-label" [class.live]="isLive()" [class.upcoming]="isPre()">
+        {{ stateLabel() }}
+      </div>
+
+      <div class="race-name">{{ race()?.name }}</div>
+
+      @if (race()?.venue) {
+        <div class="race-venue">📍 {{ race()?.venue }}</div>
+      }
+
+      @if (isPost() && race()?.winner) {
+        <div class="winner-block">
+          <span class="winner-label">🏆 Winner</span>
+          <span class="winner-name">{{ race()?.winner?.driverName }}</span>
+          @if (race()?.winner?.teamName) {
+            <span class="winner-team">{{ race()?.winner?.teamName }}</span>
+          }
+        </div>
+      }
+
+      @if (isPre() || isLive()) {
+        <div class="race-time">
+          {{ race()?.date | date: 'MMM d · h:mm a' }}
+          @if (race()?.broadcast) {
+            <span class="broadcast">{{ race()?.broadcast }}</span>
+          }
+        </div>
+      }
+
+      @if (isPost()) {
+        <div class="race-date">{{ race()?.date | date: 'MMMM d, y' }}</div>
+      }
+    </div>
+  }
+</div>

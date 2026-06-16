@@ -1,0 +1,229 @@
+.view-header {
+  margin-bottom: 1.75rem;
+
+  .view-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+  }
+
+  .view-date {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  .skeleton-day {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .skeleton {
+    border-radius: var(--radius-sm);
+    background: linear-gradient(
+      90deg,
+      var(--bg-card) 0%,
+      var(--bg-card-hover) 50%,
+      var(--bg-card) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+
+    &.skeleton-label {
+      height: 20px;
+      width: 200px;
+    }
+
+    &.skeleton-row {
+      height: 60px;
+    }
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 4rem 0;
+  color: var(--text-muted);
+
+  .empty-icon {
+    font-size: 3rem;
+  }
+
+  p {
+    font-size: 0.9rem;
+  }
+}
+
+.schedule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.schedule-day {
+  .day-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+
+    .day-label {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .game-count {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+  }
+}
+
+.day-games {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.game-row {
+  display: grid;
+  grid-template-columns: 160px 1fr auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.85rem 1rem;
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--primary);
+  transition: border-color 0.2s, background 0.2s;
+
+  &:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--primary);
+  }
+
+  .team-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    grid-column: 1;
+    grid-row: 1;
+
+    .sport-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .my-team-label {
+      font-weight: 700;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+    }
+
+    .sport-tag {
+      font-size: 0.6rem;
+      font-weight: 800;
+      padding: 1px 5px;
+      background: var(--primary);
+      border-radius: 3px;
+      color: #fff;
+      opacity: 0.85;
+      letter-spacing: 0.05em;
+    }
+  }
+
+  .game-matchup {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    grid-column: 2;
+    grid-row: 1;
+
+    .mini-logo {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+    }
+
+    .matchup-text {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+  }
+
+  .game-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.2rem;
+    grid-column: 3;
+    grid-row: 1;
+
+    .game-time {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .game-broadcast {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      background: var(--bg-secondary);
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+  }
+
+  .race-matchup {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    grid-column: 2;
+    grid-row: 1;
+
+    .race-flag {
+      font-size: 1rem;
+    }
+
+    .matchup-text {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+  }
+
+  .game-venue {
+    grid-column: 2 / 4;
+    grid-row: 2;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    opacity: 0.7;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}

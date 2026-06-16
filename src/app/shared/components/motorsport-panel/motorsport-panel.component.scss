@@ -1,0 +1,224 @@
+.panel {
+  background: var(--bg-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, var(--primary), var(--secondary));
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+  }
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: var(--primary);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--primary);
+  }
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1rem 0.75rem 1.25rem;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 40%, transparent),
+    transparent
+  );
+  border-bottom: 1px solid var(--border);
+
+  .sport-badge {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    padding: 2px 7px;
+    background: var(--primary);
+    border-radius: 4px;
+    color: #fff;
+    opacity: 0.9;
+  }
+
+  .series-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    flex: 1;
+  }
+
+  .result-badge {
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 4px;
+
+    &.live {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+  }
+
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ef4444;
+    animation: pulse-dot 1.4s ease-in-out infinite;
+  }
+}
+
+.panel-body {
+  padding: 1.1rem 1.25rem 1.1rem 1.5rem;
+  background: var(--bg-panel-body);
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-height: 110px;
+
+  &.no-race {
+    align-items: center;
+    justify-content: center;
+
+    .no-race-icon {
+      font-size: 1.5rem;
+      opacity: 0.4;
+    }
+
+    .no-race-text {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+  }
+
+  &.loading {
+    justify-content: center;
+
+    .skeleton {
+      height: 80px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(
+        90deg,
+        var(--bg-card) 0%,
+        var(--bg-card-hover) 50%,
+        var(--bg-card) 100%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.5s ease-in-out infinite;
+    }
+  }
+}
+
+.race-state-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+
+  &.live {
+    color: #ef4444;
+    animation: pulse-text 1.4s ease-in-out infinite;
+  }
+
+  &.upcoming {
+    color: #10b981;
+  }
+}
+
+.race-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.race-venue {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+
+.winner-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-radius: 6px;
+  border-left: 3px solid var(--primary);
+
+  .winner-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .winner-name {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+
+  .winner-team {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+  }
+}
+
+.race-time {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #10b981;
+  margin-top: 0.1rem;
+
+  .broadcast {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    background: var(--bg-secondary);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+}
+
+.race-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+@keyframes pulse-text {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

@@ -1,0 +1,81 @@
+import { TeamConfig, SeriesConfig } from '../models/team-config.model';
+
+export const MY_TEAMS: TeamConfig[] = [
+  {
+    kind: 'team',
+    espnId: '18',
+    abbreviation: 'NY',
+    name: 'New York Knicks',
+    shortName: 'Knicks',
+    sport: 'basketball/nba',
+    primaryColor: '#006BB6',
+    secondaryColor: '#F58426',
+  },
+  {
+    kind: 'team',
+    espnId: '19',
+    abbreviation: 'NYG',
+    name: 'New York Giants',
+    shortName: 'Giants',
+    sport: 'football/nfl',
+    primaryColor: '#0B2265',
+    secondaryColor: '#A71930',
+  },
+  {
+    kind: 'team',
+    espnId: '10',
+    abbreviation: 'NYY',
+    name: 'New York Yankees',
+    shortName: 'Yankees',
+    sport: 'baseball/mlb',
+    primaryColor: '#003087',
+    secondaryColor: '#E4E4E4',
+  },
+  {
+    kind: 'team',
+    espnId: '20',
+    abbreviation: 'WSH',
+    name: 'Washington Nationals',
+    shortName: 'Nationals',
+    sport: 'baseball/mlb',
+    primaryColor: '#AB0003',
+    secondaryColor: '#14225A',
+  },
+  {
+    kind: 'team',
+    espnId: '13',
+    abbreviation: 'NYR',
+    name: 'New York Rangers',
+    shortName: 'Rangers',
+    sport: 'hockey/nhl',
+    primaryColor: '#0038A8',
+    secondaryColor: '#CE1126',
+  },
+];
+
+export const MY_SERIES: SeriesConfig[] = [
+  {
+    kind: 'series',
+    name: 'Formula 1',
+    shortName: 'F1',
+    sport: 'racing/f1',
+    primaryColor: '#E10600',
+    secondaryColor: '#1f1f1f',
+  },
+  {
+    kind: 'series',
+    name: 'NASCAR Cup Series',
+    shortName: 'NASCAR',
+    sport: 'racing/nascar-premier',
+    primaryColor: '#FFC906',
+    secondaryColor: '#002D62',
+  },
+  {
+    kind: 'series',
+    name: 'IndyCar Series',
+    shortName: 'IndyCar',
+    sport: 'racing/irl',
+    primaryColor: '#004B8D',
+    secondaryColor: '#FFCC00',
+  },
+];
