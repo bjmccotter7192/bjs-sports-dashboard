@@ -34,7 +34,7 @@ jobs:
         run: npx ng test --watch=false
 
       - name: Build
-        run: npx ng build --base-href /
+        run: npx ng build --base-href /bjs-sports-dashboard/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
