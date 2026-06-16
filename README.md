@@ -72,7 +72,7 @@ npm install -g @angular/cli
 ```bash
 # Clone the repo
 git clone <repo-url>
-cd mlops-bj-angular-app
+cd bjs-sports-dashboard
 
 # Install dependencies
 npm install
@@ -104,7 +104,7 @@ ng build
 npm run watch
 ```
 
-The production build enables tree-shaking, minification, and chunk splitting. Build output lands in `dist/mlops-bj-angular-app/`.
+The production build enables tree-shaking, minification, and chunk splitting. Build output lands in `dist/bjs-sports-dashboard/`.
 
 ---
 

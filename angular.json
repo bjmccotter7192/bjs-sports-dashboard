@@ -2,11 +2,12 @@
   "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
   "version": 1,
   "cli": {
-    "packageManager": "npm"
+    "packageManager": "npm",
+    "analytics": false
   },
   "newProjectRoot": "projects",
   "projects": {
-    "mlops-bj-angular-app": {
+    "bjs-sports-dashboard": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -60,10 +61,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "mlops-bj-angular-app:build:production"
+              "buildTarget": "bjs-sports-dashboard:build:production"
             },
             "development": {
-              "buildTarget": "mlops-bj-angular-app:build:development"
+              "buildTarget": "bjs-sports-dashboard:build:development"
             }
           },
           "defaultConfiguration": "development"
