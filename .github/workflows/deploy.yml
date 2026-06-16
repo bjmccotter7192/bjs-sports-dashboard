@@ -31,10 +31,10 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: ng test --watch=false
+        run: npx ng test --watch=false
 
       - name: Build
-        run: ng build --base-href /
+        run: npx ng build --base-href /
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
