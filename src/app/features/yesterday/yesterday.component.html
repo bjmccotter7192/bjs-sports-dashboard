@@ -6,8 +6,8 @@
 </div>
 
 <div class="teams-grid">
-  <!-- Row 1: Yankees, Nationals, PGA Tour -->
-  @for (entry of orderedTeamPanels().slice(0, 2); track entry.team.abbreviation) {
+  <!-- Teams with a recent game (float to top) -->
+  @for (entry of activeTeamPanels(); track entry.team.abbreviation) {
     <app-team-panel
       [team]="entry.team"
       [game]="entry.game"
@@ -15,30 +15,30 @@
       (panelClick)="selectedGame.set($event)"
     />
   }
+
+  <!-- PGA Tour + Motorsports always follow active teams -->
   <app-golf-panel
     [series]="golf"
     [tournament]="pgaData().tournament"
     [isLoading]="pgaData().isLoading"
     (panelClick)="selectedTournament.set($event)"
   />
-
-  <!-- Row 2: Knicks, Giants, Rangers -->
-  @for (entry of orderedTeamPanels().slice(2); track entry.team.abbreviation) {
-    <app-team-panel
-      [team]="entry.team"
-      [game]="entry.game"
-      [isLoading]="entry.isLoading"
-      (panelClick)="selectedGame.set($event)"
-    />
-  }
-
-  <!-- Row 3: F1, NASCAR, IndyCar -->
   @for (entry of seriesData(); track entry.series.sport) {
     <app-motorsport-panel
       [series]="entry.series"
       [race]="entry.race"
       [isLoading]="entry.isLoading"
       (panelClick)="selectedRace.set($event)"
+    />
+  }
+
+  <!-- Teams with no recent game (sink to bottom) -->
+  @for (entry of inactiveTeamPanels(); track entry.team.abbreviation) {
+    <app-team-panel
+      [team]="entry.team"
+      [game]="entry.game"
+      [isLoading]="entry.isLoading"
+      (panelClick)="selectedGame.set($event)"
     />
   }
 </div>

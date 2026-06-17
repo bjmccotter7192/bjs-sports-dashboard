@@ -106,10 +106,22 @@ export class YesterdayComponent {
     isLoading: this.pga.isLoading(),
   }));
 
-  // MY_TEAMS: Knicks[0], Giants[1], Yankees[2], Nationals[3], Rangers[4]
-  // Row 1: Yankees, Nationals | Row 2: Knicks, Giants, Rangers
-  orderedTeamPanels = computed(() => {
+  // Base order: Yankees, Nationals, Knicks, Giants, Rangers (MY_TEAMS indices 2,3,0,1,4)
+  // After load: teams with a recent game float above golf+motorsports; no-game teams render below.
+  private baseTeamPanels = computed(() => {
     const t = this.teamData();
-    return [t[2], t[3], t[0], t[1], t[4]]; // Yankees, Nationals, Knicks, Giants, Rangers
+    return [t[2], t[3], t[0], t[1], t[4]];
+  });
+
+  activeTeamPanels = computed(() => {
+    const base = this.baseTeamPanels();
+    if (base.some(e => e.isLoading)) return base;
+    return base.filter(e => e.game !== null);
+  });
+
+  inactiveTeamPanels = computed(() => {
+    const base = this.baseTeamPanels();
+    if (base.some(e => e.isLoading)) return [];
+    return base.filter(e => e.game === null);
   });
 }
