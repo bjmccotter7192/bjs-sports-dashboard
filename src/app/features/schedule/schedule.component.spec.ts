@@ -24,7 +24,9 @@ import { provideRouter } from '@angular/router';
 
 import { ScheduleComponent } from './schedule.component';
 import { EspnService } from '../../core/services/espn.service';
+import { CricketService } from '../../core/services/cricket.service';
 import { createMockEspnService } from '../../testing/mock-espn.service';
+import { createMockCricketService } from '../../testing/mock-cricket.service';
 import { makeGame, makeRace } from '../../testing/test-fixtures';
 import { MY_TEAMS, MY_SERIES } from '../../core/config/teams.config';
 
@@ -32,6 +34,7 @@ describe('ScheduleComponent', () => {
   let fixture: ComponentFixture<ScheduleComponent>;
   let component: ScheduleComponent;
   let mockEspn: ReturnType<typeof createMockEspnService>;
+  let mockCricket: ReturnType<typeof createMockCricketService>;
 
   // Drain microtasks and re-render so all resource() loaders resolve
   async function settle() {
@@ -41,6 +44,7 @@ describe('ScheduleComponent', () => {
 
   beforeEach(async () => {
     mockEspn = createMockEspnService();
+    mockCricket = createMockCricketService();
 
     await TestBed.configureTestingModule({
       imports: [ScheduleComponent],
@@ -48,6 +52,7 @@ describe('ScheduleComponent', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: EspnService, useValue: mockEspn },
+        { provide: CricketService, useValue: mockCricket },
       ],
     }).compileComponents();
 

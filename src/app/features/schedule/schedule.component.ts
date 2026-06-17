@@ -1,7 +1,8 @@
 import { Component, computed, inject, resource } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { EspnService, formatDateYMD } from '../../core/services/espn.service';
-import { MY_TEAMS, MY_SERIES } from '../../core/config/teams.config';
+import { CricketService } from '../../core/services/cricket.service';
+import { MY_TEAMS, MY_SERIES, MY_CRICKET_TEAMS } from '../../core/config/teams.config';
 import { Game, Race, EspnScoreboardResponse } from '../../core/models/game.model';
 import { TeamConfig, SeriesConfig, MotorsportLeague } from '../../core/models/team-config.model';
 
@@ -25,6 +26,7 @@ const EMPTY: EspnScoreboardResponse = { events: [] };
 })
 export class ScheduleComponent {
   private espn = inject(EspnService);
+  private cricketService = inject(CricketService);
 
   private rangeStart = new Date();
   private rangeEnd = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d; })();
@@ -50,9 +52,15 @@ export class ScheduleComponent {
   private nascar  = resource({ loader: () => this.espn.getScoreboard('racing/nascar-premier', this.motorsportDateRange).catch(() => EMPTY) });
   private indycar = resource({ loader: () => this.espn.getScoreboard('racing/irl',            this.motorsportDateRange).catch(() => EMPTY) });
 
+  // ── Cricket resource (TheSportsDB — next scheduled match) ───────────
+  private wiCricket = resource({
+    loader: () => this.cricketService.getNextMatch().catch(() => null),
+  });
+
   isLoading = computed(() =>
     this.teamResources.some(r => r.res.isLoading()) ||
-    this.f1.isLoading() || this.nascar.isLoading() || this.indycar.isLoading()
+    this.f1.isLoading() || this.nascar.isLoading() || this.indycar.isLoading() ||
+    this.wiCricket.isLoading()
   );
 
   scheduleDays = computed((): ScheduleDay[] => {
@@ -64,6 +72,12 @@ export class ScheduleComponent {
       for (const game of games) {
         items.push({ kind: 'game', game, team });
       }
+    }
+
+    // ── Cricket ──
+    const cricketGame = this.wiCricket.value();
+    if (cricketGame && cricketGame.status.state === 'pre') {
+      items.push({ kind: 'game', game: cricketGame, team: MY_CRICKET_TEAMS[0] });
     }
 
     // ── Races ──

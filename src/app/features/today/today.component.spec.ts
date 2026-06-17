@@ -20,14 +20,17 @@ import { provideRouter } from '@angular/router';
 
 import { TodayComponent } from './today.component';
 import { EspnService } from '../../core/services/espn.service';
+import { CricketService } from '../../core/services/cricket.service';
 import { createMockEspnService } from '../../testing/mock-espn.service';
+import { createMockCricketService } from '../../testing/mock-cricket.service';
 import { makeGame } from '../../testing/test-fixtures';
-import { MY_TEAMS, MY_SERIES } from '../../core/config/teams.config';
+import { MY_TEAMS, MY_SERIES, MY_CRICKET_TEAMS } from '../../core/config/teams.config';
 
 describe('TodayComponent', () => {
   let fixture: ComponentFixture<TodayComponent>;
   let component: TodayComponent;
   let mockEspn: ReturnType<typeof createMockEspnService>;
+  let mockCricket: ReturnType<typeof createMockCricketService>;
 
   // Helper that fully settles all resource() loaders and re-renders
   async function settle() {
@@ -37,6 +40,7 @@ describe('TodayComponent', () => {
 
   beforeEach(async () => {
     mockEspn = createMockEspnService();
+    mockCricket = createMockCricketService();
 
     await TestBed.configureTestingModule({
       imports: [TodayComponent],
@@ -46,6 +50,7 @@ describe('TodayComponent', () => {
         // routerLink or inject the Router indirectly through shared utilities.
         provideRouter([]),
         { provide: EspnService, useValue: mockEspn },
+        { provide: CricketService, useValue: mockCricket },
       ],
     }).compileComponents();
 
@@ -72,8 +77,8 @@ describe('TodayComponent', () => {
     await settle();
 
     const panels = fixture.nativeElement.querySelectorAll('app-team-panel');
-    // MY_TEAMS has 5 entries — one panel per team
-    expect(panels.length).toBe(MY_TEAMS.length);
+    // MY_TEAMS (5) + MY_CRICKET_TEAMS (1) — cricket uses app-team-panel too
+    expect(panels.length).toBe(MY_TEAMS.length + MY_CRICKET_TEAMS.length);
   });
 
   it('renders one app-motorsport-panel per tracked series after resources settle', async () => {
@@ -93,7 +98,7 @@ describe('TodayComponent', () => {
     expect(grid).not.toBeNull();
 
     const allPanels = grid.querySelectorAll('app-team-panel, app-motorsport-panel');
-    expect(allPanels.length).toBe(MY_TEAMS.length + MY_SERIES.length);
+    expect(allPanels.length).toBe(MY_TEAMS.length + MY_SERIES.length + MY_CRICKET_TEAMS.length);
   });
 
   // ── teamData computed — default (no game) state ────────────────────────────

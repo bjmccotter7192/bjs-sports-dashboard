@@ -41,7 +41,7 @@
                 <div class="team-info">
                   <span class="sport-dot" [style.background]="item.team.primaryColor"></span>
                   <span class="my-team-label">{{ item.team.shortName }}</span>
-                  <span class="sport-tag">{{ item.team.sport.split('/')[1].toUpperCase() }}</span>
+                  <span class="sport-tag">{{ (item.team.sport.split('/').at(1) ?? item.team.sport).toUpperCase() }}</span>
                 </div>
 
                 <div class="game-matchup">

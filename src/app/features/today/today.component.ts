@@ -1,6 +1,7 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { EspnService, formatDateYMD } from '../../core/services/espn.service';
-import { MY_TEAMS, MY_SERIES } from '../../core/config/teams.config';
+import { CricketService } from '../../core/services/cricket.service';
+import { MY_TEAMS, MY_SERIES, MY_CRICKET_TEAMS } from '../../core/config/teams.config';
 import { TeamPanelComponent } from '../../shared/components/team-panel/team-panel.component';
 import { MotorsportPanelComponent } from '../../shared/components/motorsport-panel/motorsport-panel.component';
 import { GameStatsModalComponent } from '../../shared/components/game-stats-modal/game-stats-modal.component';
@@ -21,6 +22,7 @@ const EMPTY: EspnScoreboardResponse = { events: [] };
 })
 export class TodayComponent {
   private espn = inject(EspnService);
+  private cricketService = inject(CricketService);
   readonly teams = MY_TEAMS;
   readonly series = MY_SERIES;
 
@@ -54,6 +56,7 @@ export class TodayComponent {
       case 'football/nfl':   return this.nfl;
       case 'baseball/mlb':   return this.mlb;
       case 'hockey/nhl':     return this.nhl;
+      default:               return undefined;
     }
   }
 
@@ -62,8 +65,8 @@ export class TodayComponent {
       const res = this.sportResource(team.sport);
       return {
         team,
-        game: this.espn.findTeamGame(res.value(), team.abbreviation),
-        isLoading: res.isLoading(),
+        game: res ? this.espn.findTeamGame(res.value(), team.abbreviation) : null,
+        isLoading: res?.isLoading() ?? false,
       };
     })
   );
@@ -103,4 +106,31 @@ export class TodayComponent {
       };
     })
   );
+
+  // ── Cricket resource (TheSportsDB) ──────────────────────────────────
+  private wiCricket = resource({
+    loader: () => this.cricketService.getNextMatch().catch(() => null),
+  });
+
+  cricketData = computed(() =>
+    MY_CRICKET_TEAMS.map((team) => ({
+      team,
+      game: this.wiCricket.value() ?? null,
+      isLoading: this.wiCricket.isLoading(),
+    }))
+  );
+
+  // MY_TEAMS: Knicks[0], Giants[1], Yankees[2], Nationals[3], Rangers[4]
+  orderedTeamPanels = computed(() => {
+    const t = this.teamData();
+    const c = this.cricketData();
+    return [
+      t[2], // Yankees
+      t[3], // Nationals
+      c[0], // West Indies
+      t[0], // Knicks
+      t[1], // Giants
+      t[4], // Rangers
+    ];
+  });
 }

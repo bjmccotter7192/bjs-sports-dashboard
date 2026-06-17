@@ -2,7 +2,8 @@ export type SportLeague =
   | 'basketball/nba'
   | 'football/nfl'
   | 'baseball/mlb'
-  | 'hockey/nhl';
+  | 'hockey/nhl'
+  | 'cricket';
 
 export type MotorsportLeague =
   | 'racing/f1'

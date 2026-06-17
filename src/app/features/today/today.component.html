@@ -6,7 +6,7 @@
 </div>
 
 <div class="teams-grid">
-  @for (entry of teamData(); track entry.team.abbreviation) {
+  @for (entry of orderedTeamPanels(); track entry.team.abbreviation) {
     <app-team-panel
       [team]="entry.team"
       [game]="entry.game"

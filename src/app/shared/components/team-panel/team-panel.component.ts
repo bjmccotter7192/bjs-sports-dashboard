@@ -8,6 +8,7 @@ const SPORT_LABELS: Record<SportLeague, string> = {
   'football/nfl': 'NFL',
   'baseball/mlb': 'MLB',
   'hockey/nhl': 'NHL',
+  'cricket': 'Cricket',
 };
 
 @Component({
@@ -46,7 +47,7 @@ export class TeamPanelComponent {
     }
   });
 
-  hasClock = computed(() => this.team().sport !== 'baseball/mlb');
+  hasClock = computed(() => this.team().sport !== 'baseball/mlb' && this.team().sport !== 'cricket');
 
   myTeamSide = computed(() => {
     const g = this.game();

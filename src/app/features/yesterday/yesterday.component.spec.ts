@@ -15,14 +15,17 @@ import { provideRouter } from '@angular/router';
 
 import { YesterdayComponent } from './yesterday.component';
 import { EspnService } from '../../core/services/espn.service';
+import { CricketService } from '../../core/services/cricket.service';
 import { createMockEspnService } from '../../testing/mock-espn.service';
+import { createMockCricketService } from '../../testing/mock-cricket.service';
 import { makeGame, makeRace } from '../../testing/test-fixtures';
-import { MY_TEAMS, MY_SERIES } from '../../core/config/teams.config';
+import { MY_TEAMS, MY_SERIES, MY_CRICKET_TEAMS } from '../../core/config/teams.config';
 
 describe('YesterdayComponent', () => {
   let fixture: ComponentFixture<YesterdayComponent>;
   let component: YesterdayComponent;
   let mockEspn: ReturnType<typeof createMockEspnService>;
+  let mockCricket: ReturnType<typeof createMockCricketService>;
 
   // Drain microtasks and re-render so resource() loaders resolve
   async function settle() {
@@ -32,6 +35,7 @@ describe('YesterdayComponent', () => {
 
   beforeEach(async () => {
     mockEspn = createMockEspnService();
+    mockCricket = createMockCricketService();
 
     await TestBed.configureTestingModule({
       imports: [YesterdayComponent],
@@ -39,6 +43,7 @@ describe('YesterdayComponent', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: EspnService, useValue: mockEspn },
+        { provide: CricketService, useValue: mockCricket },
       ],
     }).compileComponents();
 
@@ -71,7 +76,8 @@ describe('YesterdayComponent', () => {
     await settle();
 
     const panels = fixture.nativeElement.querySelectorAll('app-team-panel');
-    expect(panels.length).toBe(MY_TEAMS.length);
+    // MY_TEAMS (5) + MY_CRICKET_TEAMS (1) — cricket uses app-team-panel too
+    expect(panels.length).toBe(MY_TEAMS.length + MY_CRICKET_TEAMS.length);
   });
 
   it('renders one app-motorsport-panel per tracked series after resources settle', async () => {

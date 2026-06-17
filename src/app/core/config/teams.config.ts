@@ -1,5 +1,18 @@
 import { TeamConfig, SeriesConfig } from '../models/team-config.model';
 
+export const MY_CRICKET_TEAMS: TeamConfig[] = [
+  {
+    kind: 'team',
+    espnId: '137151', // TheSportsDB ID — not an ESPN ID
+    abbreviation: 'WI',
+    name: 'West Indies Cricket',
+    shortName: 'West Indies',
+    sport: 'cricket',
+    primaryColor: '#7B0041',
+    secondaryColor: '#FFD700',
+  },
+];
+
 export const MY_TEAMS: TeamConfig[] = [
   {
     kind: 'team',
