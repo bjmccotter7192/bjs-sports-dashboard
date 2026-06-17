@@ -16,6 +16,7 @@ A personal sports dashboard built with Angular v21. Tracks your teams and motors
 | Motorsport | Formula 1 |
 | Motorsport | NASCAR Cup Series |
 | Motorsport | IndyCar Series |
+| Golf | PGA Tour |
 
 ---
 
@@ -23,9 +24,10 @@ A personal sports dashboard built with Angular v21. Tracks your teams and motors
 
 | Route | Description |
 |-------|-------------|
-| `/today` | Today's games and next upcoming race per series |
-| `/last-played` | Most recent completed game per team (14-day window); last race per series |
-| `/schedule` | All upcoming events for your teams and series over the next 30 days |
+| `/today` | Today's games, next upcoming race, and current/next PGA tournament. Active panels float to top; off-season teams sink to bottom. |
+| `/last-played` | Most recent completed game per team (14-day window); last race and tournament per series. Same dynamic ordering. |
+| `/schedule` | All upcoming events for your teams and series over the next 30 days, grouped by date |
+| `/news` | Latest headlines from 7 leagues (NBA, NFL, MLB, NHL, F1, IndyCar, PGA). Filterable by league. |
 
 ---
 
@@ -136,22 +138,27 @@ src/
 │   │
 │   ├── core/
 │   │   ├── config/
-│   │   │   └── teams.config.ts    # MY_TEAMS and MY_SERIES definitions
+│   │   │   └── teams.config.ts    # MY_TEAMS, MY_SERIES, MY_GOLF definitions
 │   │   ├── models/
-│   │   │   ├── game.model.ts      # EspnEvent, Game, Race interfaces
-│   │   │   └── team-config.model.ts  # TeamConfig, SeriesConfig types
+│   │   │   ├── game.model.ts      # EspnEvent, Game, Race, Tournament interfaces
+│   │   │   └── team-config.model.ts  # TeamConfig, SeriesConfig, GolfSeriesConfig types
 │   │   └── services/
 │   │       └── espn.service.ts    # All ESPN API calls + data parsing
 │   │
 │   ├── features/
 │   │   ├── today/                 # Today's Games view
 │   │   ├── yesterday/             # Last Played view
-│   │   └── schedule/              # Upcoming Schedule view
+│   │   ├── schedule/              # Upcoming Schedule view
+│   │   └── news/                  # News feed view
 │   │
 │   ├── shared/
 │   │   └── components/
-│   │       ├── team-panel/        # Card for a single team sport game
-│   │       └── motorsport-panel/  # Card for a single race series
+│   │       ├── team-panel/              # Card for a single team sport game
+│   │       ├── motorsport-panel/        # Card for a single race series
+│   │       ├── golf-panel/              # Card for PGA Tour with inline leaderboard
+│   │       ├── game-stats-modal/        # Game stats overlay
+│   │       ├── race-stats-modal/        # Race results overlay
+│   │       └── tournament-stats-modal/  # Tournament leaderboard overlay
 │   │
 │   └── testing/
 │       ├── mock-espn.service.ts   # Vitest mock factory for EspnService
@@ -182,6 +189,7 @@ Sport slugs in use:
 | Formula 1 | `racing/f1` |
 | NASCAR Cup | `racing/nascar-premier` |
 | IndyCar | `racing/irl` |
+| PGA Tour | `golf/pga` |
 
 > **MLB note:** The schedule view uses the per-team schedule endpoint instead of the league scoreboard to avoid ESPN's 100-event cap (which only covers ~7 days of MLB games).
 
