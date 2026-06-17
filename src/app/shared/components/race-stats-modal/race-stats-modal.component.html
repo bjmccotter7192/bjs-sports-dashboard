@@ -1,0 +1,38 @@
+<div class="modal-backdrop" (click)="close.emit()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div class="modal-title">
+        <span class="race-name">{{ race().name }}</span>
+        <span class="race-detail">{{ race().status.detail }}</span>
+      </div>
+      <button class="close-btn" (click)="close.emit()" aria-label="Close">✕</button>
+    </div>
+
+    <div class="modal-body">
+      @if (!race().topFinishers?.length) {
+        <p class="no-stats">No results available for this race.</p>
+      } @else {
+        <div class="finishers-header">
+          <span>Pos</span>
+          <span>Driver</span>
+        </div>
+        @for (finisher of race().topFinishers; track finisher.position) {
+          <div class="finisher-row" [class.winner]="finisher.winner">
+            <span class="position" [class.gold]="finisher.position === 1">
+              {{ finisher.position }}
+            </span>
+            @if (finisher.flag) {
+              <img [src]="finisher.flag" [alt]="finisher.driverName" class="flag" loading="lazy" />
+            }
+            <span class="driver-name">{{ finisher.driverName }}</span>
+            @if (finisher.winner) {
+              <span class="winner-badge">🏆</span>
+            }
+          </div>
+        }
+      }
+    </div>
+
+  </div>
+</div>

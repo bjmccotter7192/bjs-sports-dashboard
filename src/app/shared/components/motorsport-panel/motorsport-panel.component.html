@@ -2,6 +2,8 @@
   class="panel"
   [style.--primary]="series().primaryColor"
   [style.--secondary]="series().secondaryColor"
+  [class.clickable]="isClickable()"
+  (click)="onPanelClick()"
 >
   <div class="panel-header">
     <span class="sport-badge">{{ seriesLabel() }}</span>

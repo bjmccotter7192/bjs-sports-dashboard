@@ -25,6 +25,8 @@ export function createMockEspnService(): MockEspnService {
     // ── Async fetchers — return resolved Promises so resource() settles immediately ──
     getScoreboard: vi.fn().mockResolvedValue({ events: [] } satisfies EspnScoreboardResponse),
     getTeamSchedule: vi.fn().mockResolvedValue({ events: [] } satisfies EspnScoreboardResponse),
+    fetchGameLeaders: vi.fn().mockResolvedValue([]),
+    fetchMlbBoxscore: vi.fn().mockResolvedValue([]),
 
     // ── Synchronous helpers — return null / empty by default ──
     findTeamGame:       vi.fn().mockReturnValue(null satisfies Game | null),

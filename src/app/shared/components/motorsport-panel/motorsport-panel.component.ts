@@ -1,6 +1,6 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { SeriesConfig } from '../../../core/models/team-config.model';
+import { SeriesConfig, MotorsportLeague } from '../../../core/models/team-config.model';
 import { Race } from '../../../core/models/game.model';
 
 @Component({
@@ -14,9 +14,19 @@ export class MotorsportPanelComponent {
   race = input<Race | null>(null);
   isLoading = input<boolean>(false);
 
+  panelClick = output<{ race: Race; sport: MotorsportLeague }>();
+
   isLive = computed(() => this.race()?.status.state === 'in');
   isPre = computed(() => this.race()?.status.state === 'pre');
   isPost = computed(() => this.race()?.status.state === 'post');
+  isClickable = computed(() => !!this.race() && this.isPost());
+
+  onPanelClick() {
+    const r = this.race();
+    if (r && this.isPost()) {
+      this.panelClick.emit({ race: r, sport: this.series().sport });
+    }
+  }
 
   seriesLabel = computed(() => {
     const sport = this.series().sport;

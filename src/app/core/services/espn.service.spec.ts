@@ -259,6 +259,69 @@ describe('EspnService', () => {
       expect(race.id).toBe('r42');
       expect(race.name).toBe('British Grand Prix');
     });
+
+    it('populates topFinishers for a post-race event', () => {
+      const event: EspnEvent = {
+        id: 'r1', date: '2026-06-20T13:00Z', name: 'British Grand Prix', shortName: 'British GP',
+        status: { type: { state: 'post', completed: true, description: 'Final', shortDetail: 'Final' } },
+        competitions: [{
+          type: { abbreviation: 'Race' },
+          date: '2026-06-20T13:00Z',
+          competitors: [
+            { order: 1, winner: true,  athlete: { displayName: 'Lewis Hamilton',  shortName: 'L. Hamilton' } },
+            { order: 2, winner: false, athlete: { displayName: 'Max Verstappen',  shortName: 'M. Verstappen' } },
+            { order: 3, winner: false, athlete: { displayName: 'Charles Leclerc', shortName: 'C. Leclerc' } },
+          ],
+        }],
+      };
+      const race = service.parseRace(event);
+      expect(race.topFinishers).toHaveLength(3);
+      expect(race.topFinishers![0].position).toBe(1);
+      expect(race.topFinishers![0].driverName).toBe('Lewis Hamilton');
+      expect(race.topFinishers![0].winner).toBe(true);
+      expect(race.topFinishers![1].driverName).toBe('Max Verstappen');
+      expect(race.topFinishers![2].driverName).toBe('Charles Leclerc');
+    });
+
+    it('topFinishers is undefined for a pre-race event', () => {
+      const race = service.parseRace(makeEspnRaceEvent({ state: 'pre' }));
+      expect(race.topFinishers).toBeUndefined();
+    });
+
+    it('limits topFinishers to 5 even when more competitors exist', () => {
+      const event: EspnEvent = {
+        id: 'r1', date: '2026-06-20T13:00Z', name: 'Test Race', shortName: 'Test',
+        status: { type: { state: 'post', completed: true, description: 'Final', shortDetail: 'Final' } },
+        competitions: [{
+          type: { abbreviation: 'Race' },
+          date: '2026-06-20T13:00Z',
+          competitors: [1,2,3,4,5,6,7].map(i => ({
+            order: i,
+            athlete: { displayName: `Driver ${i}`, shortName: `D${i}` },
+          })),
+        }],
+      };
+      const race = service.parseRace(event);
+      expect(race.topFinishers).toHaveLength(5);
+    });
+
+    it('sorts topFinishers by order ascending', () => {
+      const event: EspnEvent = {
+        id: 'r1', date: '2026-06-20T13:00Z', name: 'Test Race', shortName: 'Test',
+        status: { type: { state: 'post', completed: true, description: 'Final', shortDetail: 'Final' } },
+        competitions: [{
+          type: { abbreviation: 'Race' },
+          date: '2026-06-20T13:00Z',
+          competitors: [
+            { order: 3, athlete: { displayName: 'Third', shortName: '3rd' } },
+            { order: 1, athlete: { displayName: 'First', shortName: '1st' } },
+            { order: 2, athlete: { displayName: 'Second', shortName: '2nd' } },
+          ],
+        }],
+      };
+      const race = service.parseRace(event);
+      expect(race.topFinishers!.map(f => f.driverName)).toEqual(['First', 'Second', 'Third']);
+    });
   });
 
   // ── findNextRace ─────────────────────────────────────────────────────────
@@ -319,6 +382,168 @@ describe('EspnService', () => {
 
     it('returns empty for undefined scoreboard', () => {
       expect(service.getAllUpcomingRaces(undefined)).toEqual([]);
+    });
+  });
+
+  // ── fetchGameLeaders ─────────────────────────────────────────────────────
+
+  describe('fetchGameLeaders', () => {
+    it('calls the sport summary endpoint with the event id param', async () => {
+      const promise = service.fetchGameLeaders('basketball/nba', 'event-1');
+      const req = http.expectOne(r => r.url.includes('/basketball/nba/summary'));
+      expect(req.request.params.get('event')).toBe('event-1');
+      req.flush({ leaders: [] });
+      await promise;
+    });
+
+    it('returns empty array when summary has no leaders', async () => {
+      const promise = service.fetchGameLeaders('basketball/nba', 'event-1');
+      http.expectOne(r => r.url.includes('/basketball/nba/summary')).flush({ leaders: [] });
+      const result = await promise;
+      expect(result).toEqual([]);
+    });
+
+    it('parses per-team summary leaders into one category per stat', async () => {
+      const body = {
+        leaders: [
+          {
+            team: { id: '10' },
+            leaders: [{
+              name: 'points',
+              displayName: 'Points',
+              leaders: [{
+                displayValue: '30 PTS',
+                mainStat: { value: '30', label: 'PTS' },
+                athlete: { displayName: 'Jalen Brunson', shortName: 'J. Brunson', position: { abbreviation: 'PG' } },
+              }],
+            }],
+          },
+          {
+            team: { id: '20' },
+            leaders: [{
+              name: 'points',
+              displayName: 'Points',
+              leaders: [{
+                displayValue: '28 PTS',
+                mainStat: { value: '28', label: 'PTS' },
+                athlete: { displayName: 'Donovan Mitchell', shortName: 'D. Mitchell', position: { abbreviation: 'SG' } },
+              }],
+            }],
+          },
+        ],
+      };
+      const promise = service.fetchGameLeaders('basketball/nba', 'event-1');
+      http.expectOne(r => r.url.includes('/basketball/nba/summary')).flush(body);
+      const result = await promise;
+      expect(result).toHaveLength(1);
+      expect(result[0].label).toBe('Points');
+      expect(result[0].players).toHaveLength(2);
+      expect(result[0].players[0].playerName).toBe('Jalen Brunson');
+      expect(result[0].players[0].statLine).toBe('30 PTS');
+      expect(result[0].players[1].playerName).toBe('Donovan Mitchell');
+    });
+
+    it('uses mainStat value+label for stat line when present', async () => {
+      const body = {
+        leaders: [{
+          team: { id: '10' },
+          leaders: [{
+            name: 'points',
+            displayName: 'Points',
+            leaders: [{
+              displayValue: 'fallback',
+              mainStat: { value: '42', label: 'PTS' },
+              athlete: { displayName: 'Player A', shortName: 'P. A' },
+            }],
+          }],
+        }],
+      };
+      const promise = service.fetchGameLeaders('basketball/nba', 'event-1');
+      http.expectOne(r => r.url.includes('/basketball/nba/summary')).flush(body);
+      const result = await promise;
+      expect(result[0].players[0].statLine).toBe('42 PTS');
+    });
+  });
+
+  // ── fetchMlbBoxscore ─────────────────────────────────────────────────────
+
+  describe('fetchMlbBoxscore', () => {
+    it('calls the MLB summary endpoint with the event id param', async () => {
+      const promise = service.fetchMlbBoxscore('event-1');
+      const req = http.expectOne(r => r.url.includes('/baseball/mlb/summary'));
+      expect(req.request.params.get('event')).toBe('event-1');
+      req.flush({ boxscore: { players: [] } });
+      await promise;
+    });
+
+    it('returns empty array when boxscore has no players', async () => {
+      const promise = service.fetchMlbBoxscore('event-1');
+      http.expectOne(r => r.url.includes('/baseball/mlb/summary')).flush({ boxscore: { players: [] } });
+      const result = await promise;
+      expect(result).toEqual([]);
+    });
+
+    it('returns top 2 batters per team sorted by RBI desc', async () => {
+      const body = {
+        boxscore: {
+          players: [
+            {
+              team: { displayName: 'Yankees' },
+              statistics: [{
+                type: 'batting',
+                keys: ['hits-atBats', 'atBats', 'runs', 'hits', 'RBIs', 'homeRuns'],
+                athletes: [
+                  // RBI=3 → sorts first
+                  { athlete: { displayName: 'Aaron Judge', shortName: 'A. Judge', position: { abbreviation: 'RF' } }, stats: ['2-4', '4', '2', '2', '3', '1'] },
+                  // RBI=1 → sorts second
+                  { athlete: { displayName: 'Juan Soto', shortName: 'J. Soto', position: { abbreviation: 'LF' } }, stats: ['1-4', '4', '0', '1', '1', '0'] },
+                  // RBI=0 → would be third, excluded (top 2 only)
+                  { athlete: { displayName: 'Anthony Volpe', shortName: 'A. Volpe', position: { abbreviation: 'SS' } }, stats: ['0-4', '4', '0', '0', '0', '0'] },
+                ],
+              }],
+            },
+          ],
+        },
+      };
+      const promise = service.fetchMlbBoxscore('event-1');
+      http.expectOne(r => r.url.includes('/baseball/mlb/summary')).flush(body);
+      const result = await promise;
+      const batting = result.find(c => c.label === 'Batting Leaders');
+      expect(batting).toBeTruthy();
+      expect(batting!.players).toHaveLength(2);
+      expect(batting!.players[0].playerName).toBe('Aaron Judge');
+      expect(batting!.players[0].statLine).toContain('2-4');
+      expect(batting!.players[0].statLine).toContain('3 RBI');
+      expect(batting!.players[0].statLine).toContain('1 HR');
+      expect(batting!.players[1].playerName).toBe('Juan Soto');
+    });
+
+    it('includes Starting Pitchers category with IP, K, and ERA', async () => {
+      const body = {
+        boxscore: {
+          players: [
+            {
+              team: { displayName: 'Yankees' },
+              statistics: [{
+                type: 'pitching',
+                keys: ['fullInnings.partInnings', 'hits', 'runs', 'earnedRuns', 'walks', 'strikeouts', 'homeRuns', 'pitches-strikes', 'ERA', 'pitches'],
+                athletes: [
+                  { athlete: { displayName: 'Gerrit Cole', shortName: 'G. Cole', position: { abbreviation: 'SP' } }, stats: ['6.0', '3', '2', '2', '2', '8', '1', '90-59', '2.57', '90'] },
+                ],
+              }],
+            },
+          ],
+        },
+      };
+      const promise = service.fetchMlbBoxscore('event-1');
+      http.expectOne(r => r.url.includes('/baseball/mlb/summary')).flush(body);
+      const result = await promise;
+      const pitching = result.find(c => c.label === 'Starting Pitchers');
+      expect(pitching).toBeTruthy();
+      expect(pitching!.players[0].playerName).toBe('Gerrit Cole');
+      expect(pitching!.players[0].statLine).toContain('6.0 IP');
+      expect(pitching!.players[0].statLine).toContain('8 K');
+      expect(pitching!.players[0].statLine).toContain('ERA 2.57');
     });
   });
 

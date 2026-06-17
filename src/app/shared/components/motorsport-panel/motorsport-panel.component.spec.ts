@@ -123,4 +123,60 @@ describe('MotorsportPanelComponent', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('.race-name')?.textContent?.trim()).toBe('British Grand Prix');
   });
+
+  // ── isClickable ──────────────────────────────────────────────────────────
+
+  it('isClickable is true when race state is post', () => {
+    const race = makeRace({ status: { state: 'post', description: 'Final', detail: 'Final' } });
+    fixture.componentRef.setInput('series', f1);
+    fixture.componentRef.setInput('race', race);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.isClickable()).toBe(true);
+  });
+
+  it('isClickable is false when race state is pre', () => {
+    const race = makeRace({ status: { state: 'pre', description: 'Scheduled', detail: 'Scheduled' } });
+    fixture.componentRef.setInput('series', f1);
+    fixture.componentRef.setInput('race', race);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.isClickable()).toBe(false);
+  });
+
+  it('isClickable is false when race is null', () => {
+    fixture.componentRef.setInput('series', f1);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.isClickable()).toBe(false);
+  });
+
+  // ── panelClick output ────────────────────────────────────────────────────
+
+  it('emits panelClick with race and sport when a post-race panel is clicked', () => {
+    const race = makeRace({
+      status: { state: 'post', description: 'Final', detail: 'Final' },
+      winner: { driverName: 'Lewis Hamilton', teamName: 'Ferrari' },
+    });
+    fixture.componentRef.setInput('series', f1);
+    fixture.componentRef.setInput('race', race);
+    fixture.detectChanges();
+
+    const events: { race: unknown; sport: unknown }[] = [];
+    fixture.componentInstance.panelClick.subscribe(e => events.push(e));
+    (fixture.nativeElement.querySelector('.panel') as HTMLElement).click();
+
+    expect(events).toHaveLength(1);
+    expect(events[0].sport).toBe('racing/f1');
+  });
+
+  it('does not emit panelClick when a pre-race panel is clicked', () => {
+    const race = makeRace({ status: { state: 'pre', description: 'Scheduled', detail: 'Scheduled' } });
+    fixture.componentRef.setInput('series', f1);
+    fixture.componentRef.setInput('race', race);
+    fixture.detectChanges();
+
+    const events: unknown[] = [];
+    fixture.componentInstance.panelClick.subscribe(e => events.push(e));
+    (fixture.nativeElement.querySelector('.panel') as HTMLElement).click();
+
+    expect(events).toHaveLength(0);
+  });
 });

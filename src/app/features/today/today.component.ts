@@ -1,16 +1,21 @@
-import { Component, computed, inject, resource } from '@angular/core';
+import { Component, computed, inject, resource, signal } from '@angular/core';
 import { EspnService, formatDateYMD } from '../../core/services/espn.service';
 import { MY_TEAMS, MY_SERIES } from '../../core/config/teams.config';
 import { TeamPanelComponent } from '../../shared/components/team-panel/team-panel.component';
 import { MotorsportPanelComponent } from '../../shared/components/motorsport-panel/motorsport-panel.component';
-import { EspnScoreboardResponse } from '../../core/models/game.model';
+import { GameStatsModalComponent } from '../../shared/components/game-stats-modal/game-stats-modal.component';
+import { RaceStatsModalComponent } from '../../shared/components/race-stats-modal/race-stats-modal.component';
+import { EspnScoreboardResponse, Game, Race } from '../../core/models/game.model';
 import { SportLeague, MotorsportLeague } from '../../core/models/team-config.model';
+
+interface SelectedGame { game: Game; sport: SportLeague; }
+interface SelectedRace { race: Race; sport: MotorsportLeague; }
 
 const EMPTY: EspnScoreboardResponse = { events: [] };
 
 @Component({
   selector: 'app-today',
-  imports: [TeamPanelComponent, MotorsportPanelComponent],
+  imports: [TeamPanelComponent, MotorsportPanelComponent, GameStatsModalComponent, RaceStatsModalComponent],
   templateUrl: './today.component.html',
   styleUrl: './today.component.scss',
 })
@@ -18,6 +23,9 @@ export class TodayComponent {
   private espn = inject(EspnService);
   readonly teams = MY_TEAMS;
   readonly series = MY_SERIES;
+
+  selectedGame = signal<SelectedGame | null>(null);
+  selectedRace = signal<SelectedRace | null>(null);
   readonly date = formatDateYMD(new Date());
   readonly dateLabel = new Date().toLocaleDateString('en-US', {
     weekday: 'long',

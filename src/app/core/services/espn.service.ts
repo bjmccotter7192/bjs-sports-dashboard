@@ -5,9 +5,13 @@ import {
   EspnScoreboardResponse,
   EspnEvent,
   EspnCompetitor,
+  EspnLeaderCategory,
   Game,
   GameTeam,
   Race,
+  RaceFinisher,
+  StatCategory,
+  PlayerStat,
 } from '../models/game.model';
 import { SportLeague, MotorsportLeague } from '../models/team-config.model';
 
@@ -158,7 +162,157 @@ export class EspnService {
       },
       venue: competition.venue?.fullName,
       broadcast: competition.broadcasts?.[0]?.names?.[0],
+      leaders: this.parseLeaders(competition.leaders),
     };
+  }
+
+  /** Fetch per-game stat leaders from the summary endpoint (NBA/NFL/NHL use this) */
+  async fetchGameLeaders(sport: SportLeague, eventId: string): Promise<StatCategory[]> {
+    const data = await firstValueFrom(
+      this.http.get<any>(`${this.baseUrl}/${sport}/summary`, { params: { event: eventId } })
+    );
+    return this.parseSummaryLeaders(data.leaders ?? []);
+  }
+
+  /** Fetch MLB boxscore — returns top batters per team + starting pitchers */
+  async fetchMlbBoxscore(eventId: string): Promise<StatCategory[]> {
+    const data = await firstValueFrom(
+      this.http.get<any>(`${this.baseUrl}/baseball/mlb/summary`, { params: { event: eventId } })
+    );
+    return this.parseMlbBoxscore(data.boxscore?.players ?? []);
+  }
+
+  private parseMlbBoxscore(teamGroups: any[]): StatCategory[] {
+    const batters: PlayerStat[] = [];
+    const pitchers: PlayerStat[] = [];
+
+    for (const group of teamGroups) {
+      for (const statGroup of (group.statistics ?? [])) {
+        const type: string = statGroup.type ?? '';
+        const keys: string[] = statGroup.keys ?? [];
+        const athletes: any[] = statGroup.athletes ?? [];
+
+        if (type === 'batting') {
+          const rbIndex = keys.indexOf('RBIs');
+          const hIndex = keys.indexOf('hits');
+          const haIndex = keys.indexOf('hits-atBats');
+          const hrIndex = keys.indexOf('homeRuns');
+          const sorted = [...athletes].sort((a, b) => {
+            const rbA = parseInt(a.stats?.[rbIndex] ?? '0', 10);
+            const rbB = parseInt(b.stats?.[rbIndex] ?? '0', 10);
+            if (rbB !== rbA) return rbB - rbA;
+            return parseInt(b.stats?.[hIndex] ?? '0', 10) - parseInt(a.stats?.[hIndex] ?? '0', 10);
+          });
+          for (const a of sorted.slice(0, 2)) {
+            const ath = a.athlete;
+            const stats: string[] = a.stats ?? [];
+            const ha = haIndex >= 0 ? stats[haIndex] : '';
+            const rbi = rbIndex >= 0 ? stats[rbIndex] : '0';
+            const hr = hrIndex >= 0 ? stats[hrIndex] : '0';
+            const parts = [ha];
+            if (rbi && rbi !== '0') parts.push(`${rbi} RBI`);
+            if (hr && hr !== '0') parts.push(`${hr} HR`);
+            batters.push({
+              playerName: ath?.displayName ?? 'Unknown',
+              shortName: ath?.shortName ?? '',
+              headshot: (ath?.headshot as { href: string } | undefined)?.href,
+              position: ath?.position?.abbreviation,
+              statLine: parts.join(', '),
+            });
+          }
+        } else if (type === 'pitching') {
+          const first = athletes[0];
+          if (first) {
+            const ath = first.athlete;
+            const stats: string[] = first.stats ?? [];
+            const ipIndex = keys.indexOf('fullInnings.partInnings');
+            const kIndex = keys.indexOf('strikeouts');
+            const eraIndex = keys.indexOf('ERA');
+            const parts = [
+              ipIndex >= 0 && stats[ipIndex] ? `${stats[ipIndex]} IP` : '',
+              kIndex >= 0 && stats[kIndex] ? `${stats[kIndex]} K` : '',
+              eraIndex >= 0 && stats[eraIndex] ? `ERA ${stats[eraIndex]}` : '',
+            ].filter(Boolean);
+            pitchers.push({
+              playerName: ath?.displayName ?? 'Unknown',
+              shortName: ath?.shortName ?? '',
+              headshot: (ath?.headshot as { href: string } | undefined)?.href,
+              position: 'SP',
+              statLine: parts.join(', '),
+            });
+          }
+        }
+      }
+    }
+
+    const result: StatCategory[] = [];
+    if (batters.length) result.push({ label: 'Batting Leaders', players: batters });
+    if (pitchers.length) result.push({ label: 'Starting Pitchers', players: pitchers });
+    return result;
+  }
+
+  private parseSummaryLeaders(teamGroups: any[]): StatCategory[] {
+    // Summary structure: [{ team, leaders: [{ name, displayName, leaders: [entry] }] }]
+    // Merge per-team leaders into one entry per stat category.
+    const cats = new Map<string, StatCategory>();
+    for (const group of teamGroups) {
+      for (const cat of (group.leaders ?? [])) {
+        if (!cats.has(cat.name)) {
+          cats.set(cat.name, { label: cat.displayName, players: [] });
+        }
+        const category = cats.get(cat.name)!;
+        for (const entry of (cat.leaders ?? []).slice(0, 1)) {
+          category.players.push(this.parseSummaryEntry(entry));
+        }
+      }
+    }
+    return Array.from(cats.values()).filter((c) => c.players.length > 0);
+  }
+
+  private parseSummaryEntry(entry: any): PlayerStat {
+    const a = entry.athlete;
+    const headshot =
+      typeof a?.headshot === 'string'
+        ? a.headshot
+        : (a?.headshot as { href: string } | undefined)?.href;
+    const statLine = entry.mainStat
+      ? `${entry.mainStat.value} ${entry.mainStat.label}`
+      : entry.displayValue;
+    return {
+      playerName: a?.displayName ?? 'Unknown',
+      shortName: a?.shortName ?? '',
+      headshot,
+      position: a?.position?.abbreviation,
+      statLine,
+    };
+  }
+
+  private parseLeaders(raw: EspnLeaderCategory[] | undefined): StatCategory[] {
+    if (!raw?.length) return [];
+    return raw.map((cat) => {
+      // Take top 1 per team so both teams are always represented (important for MLB)
+      const seenTeams = new Set<string>();
+      const players: PlayerStat[] = [];
+      for (const entry of (cat.leaders ?? [])) {
+        const teamId = entry.team?.id ?? `unknown-${players.length}`;
+        if (!seenTeams.has(teamId)) {
+          seenTeams.add(teamId);
+          const a = entry.athlete;
+          const headshot =
+            typeof a?.headshot === 'string'
+              ? a.headshot
+              : (a?.headshot as { href: string } | undefined)?.href;
+          players.push({
+            playerName: a?.displayName ?? 'Unknown',
+            shortName: a?.shortName ?? '',
+            headshot,
+            position: a?.position?.abbreviation,
+            statLine: entry.displayValue,
+          });
+        }
+      }
+      return { label: cat.displayName, players };
+    });
   }
 
   private parseTeam(competitor: EspnCompetitor): GameTeam {
@@ -235,9 +389,19 @@ export class EspnService {
       event.competitions.find((c) => c.type?.abbreviation === 'Race') ??
       event.competitions[0];
 
-    const winnerRaw = raceComp?.competitors?.find(
-      (c) => c.order === 1
-    ) as any;
+    const competitors = (raceComp?.competitors ?? []) as any[];
+    const sorted = [...competitors].sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+    const winnerRaw = sorted.find((c) => c.order === 1);
+
+    const topFinishers: RaceFinisher[] = event.status.type.state === 'post'
+      ? sorted.slice(0, 5).map((c): RaceFinisher => ({
+          position: c.order ?? 0,
+          driverName: c.athlete?.displayName ?? c.team?.displayName ?? 'Unknown',
+          shortName: c.athlete?.shortName ?? c.team?.shortDisplayName ?? '',
+          flag: c.athlete?.flag?.href,
+          winner: c.winner ?? c.order === 1,
+        }))
+      : [];
 
     return {
       id: event.id,
@@ -261,6 +425,7 @@ export class EspnService {
               teamName: winnerRaw.team?.displayName ?? '',
             }
           : undefined,
+      topFinishers: topFinishers.length ? topFinishers : undefined,
     };
   }
 }

@@ -11,6 +11,7 @@
       [team]="entry.team"
       [game]="entry.game"
       [isLoading]="entry.isLoading"
+      (panelClick)="selectedGame.set($event)"
     />
   }
   @for (entry of seriesData(); track entry.series.sport) {
@@ -18,6 +19,22 @@
       [series]="entry.series"
       [race]="entry.race"
       [isLoading]="entry.isLoading"
+      (panelClick)="selectedRace.set($event)"
     />
   }
 </div>
+
+@if (selectedGame()) {
+  <app-game-stats-modal
+    [game]="selectedGame()!.game"
+    [sport]="selectedGame()!.sport"
+    (close)="selectedGame.set(null)"
+  />
+}
+
+@if (selectedRace()) {
+  <app-race-stats-modal
+    [race]="selectedRace()!.race"
+    (close)="selectedRace.set(null)"
+  />
+}

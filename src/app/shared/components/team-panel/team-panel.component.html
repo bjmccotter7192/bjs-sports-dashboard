@@ -2,6 +2,8 @@
   class="panel"
   [style.--primary]="team().primaryColor"
   [style.--secondary]="team().secondaryColor"
+  [class.clickable]="isClickable()"
+  (click)="onPanelClick()"
 >
   <div class="panel-header">
     <span class="sport-badge">{{ sportLabel() }}</span>
@@ -45,8 +47,8 @@
         <div class="vs-block">
           <span class="at-vs">{{ myTeamSide() === 'home' ? 'vs' : '@' }}</span>
           <span class="game-status" [class.live]="isLive()" [class.pre]="isPre()">
-            @if (isLive() && game()?.status?.clock) {
-              {{ game()?.status?.period }}Q &nbsp;{{ game()?.status?.clock }}
+            @if (isLive() && hasClock() && game()?.status?.clock) {
+              {{ game()?.status?.period }}{{ periodLabel() }}&nbsp;{{ game()?.status?.clock }}
             } @else {
               {{ game()?.status?.detail }}
             }
@@ -72,6 +74,13 @@
 
       @if (game()?.venue) {
         <div class="venue">📍 {{ game()?.venue }}</div>
+      }
+
+      @if (isPre()) {
+        <div class="game-date">{{ game()?.date | date: 'MMM d · h:mm a' }}</div>
+      }
+      @if (isPost()) {
+        <div class="game-date">{{ game()?.date | date: 'MMMM d, y' }}</div>
       }
     </div>
   }

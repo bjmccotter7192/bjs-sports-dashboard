@@ -1,0 +1,52 @@
+<div class="modal-backdrop" (click)="close.emit()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div class="modal-title">
+        <span class="matchup">{{ game().awayTeam.abbreviation }} @ {{ game().homeTeam.abbreviation }}</span>
+        <span class="game-detail">{{ game().status.detail }}</span>
+      </div>
+      <button class="close-btn" (click)="close.emit()" aria-label="Close">✕</button>
+    </div>
+
+    <div class="modal-body">
+      @if (isLoading()) {
+        <div class="loading-state">
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+        </div>
+      } @else if (!leaders().length) {
+        <p class="no-stats">No player stats available for this game.</p>
+      } @else {
+        @for (cat of leaders(); track cat.label) {
+          <div class="stat-category">
+            <h4 class="cat-label">{{ cat.label }}</h4>
+            @for (player of cat.players; track player.playerName) {
+              <div class="player-row">
+                @if (player.headshot) {
+                  <img
+                    [src]="player.headshot"
+                    [alt]="player.playerName"
+                    class="player-headshot"
+                    loading="lazy"
+                  />
+                } @else {
+                  <div class="player-headshot placeholder"></div>
+                }
+                <div class="player-info">
+                  <span class="player-name">{{ player.playerName }}</span>
+                  @if (player.position) {
+                    <span class="player-pos">{{ player.position }}</span>
+                  }
+                </div>
+                <span class="stat-line">{{ player.statLine }}</span>
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+
+  </div>
+</div>

@@ -225,4 +225,141 @@ describe('TeamPanelComponent', () => {
     const oppAbbr = el.querySelector('.opp-team .team-abbr')?.textContent?.trim();
     expect(oppAbbr).toBe('BOS');
   });
+
+  // ── periodLabel ──────────────────────────────────────────────────────────
+
+  // Demonstrates: periodLabel returns sport-specific suffix for in-game period display.
+  it('periodLabel returns "Q" for NBA', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.periodLabel()).toBe('Q');
+  });
+
+  it('periodLabel returns "Q" for NFL', () => {
+    const giants = { ...knicks, sport: 'football/nfl' as const };
+    fixture.componentRef.setInput('team', giants);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.periodLabel()).toBe('Q');
+  });
+
+  it('periodLabel returns "P" for NHL', () => {
+    const rangers = { ...knicks, sport: 'hockey/nhl' as const };
+    fixture.componentRef.setInput('team', rangers);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.periodLabel()).toBe('P');
+  });
+
+  it('periodLabel returns empty string for MLB', () => {
+    const yankees = { ...knicks, sport: 'baseball/mlb' as const };
+    fixture.componentRef.setInput('team', yankees);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.periodLabel()).toBe('');
+  });
+
+  // ── hasClock ─────────────────────────────────────────────────────────────
+
+  it('hasClock is true for NBA', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.hasClock()).toBe(true);
+  });
+
+  it('hasClock is false for MLB', () => {
+    const yankees = { ...knicks, sport: 'baseball/mlb' as const };
+    fixture.componentRef.setInput('team', yankees);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.hasClock()).toBe(false);
+  });
+
+  // ── isPost ───────────────────────────────────────────────────────────────
+
+  it('isPost is true when game state is "post"', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({ status: { state: 'post', description: 'Final', detail: 'Final' } }));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.isPost()).toBe(true);
+  });
+
+  it('isPost is false when game state is "pre"', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({ status: { state: 'pre', description: 'Scheduled', detail: 'Scheduled' } }));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.isPost()).toBe(false);
+  });
+
+  // ── isClickable / .clickable CSS class ──────────────────────────────────
+
+  it('isClickable is true for a post-game', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({ status: { state: 'post', description: 'Final', detail: 'Final' } }));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.isClickable()).toBe(true);
+  });
+
+  it('isClickable is true for a live game', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({ status: { state: 'in', description: 'In Progress', detail: 'Q3 4:22' } }));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.isClickable()).toBe(true);
+  });
+
+  it('isClickable is false for a pre-game', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({ status: { state: 'pre', description: 'Scheduled', detail: 'Scheduled' } }));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.isClickable()).toBe(false);
+  });
+
+  it('isClickable is false when game is null', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.isClickable()).toBe(false);
+  });
+
+  it('panel has .clickable class for a post-game', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({ status: { state: 'post', description: 'Final', detail: 'Final' } }));
+    fixture.detectChanges();
+    const panel = fixture.nativeElement.querySelector('.panel');
+    expect(panel?.classList.contains('clickable')).toBe(true);
+  });
+
+  it('panel does not have .clickable class for a pre-game', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({ status: { state: 'pre', description: 'Scheduled', detail: 'Scheduled' } }));
+    fixture.detectChanges();
+    const panel = fixture.nativeElement.querySelector('.panel');
+    expect(panel?.classList.contains('clickable')).toBe(false);
+  });
+
+  // ── panelClick output ────────────────────────────────────────────────────
+
+  it('emits panelClick with game and sport when a post-game panel is clicked', () => {
+    const game = makeGame({
+      homeTeam: { ...makeGame().homeTeam, abbreviation: 'NY' },
+      status: { state: 'post', description: 'Final', detail: 'Final' },
+    });
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', game);
+    fixture.detectChanges();
+
+    const events: { game: unknown; sport: unknown }[] = [];
+    fixture.componentInstance.panelClick.subscribe(e => events.push(e));
+    (fixture.nativeElement.querySelector('.panel') as HTMLElement).click();
+
+    expect(events).toHaveLength(1);
+    expect(events[0].sport).toBe('basketball/nba');
+  });
+
+  it('does not emit panelClick when a pre-game panel is clicked', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({ status: { state: 'pre', description: 'Scheduled', detail: 'Scheduled' } }));
+    fixture.detectChanges();
+
+    const events: unknown[] = [];
+    fixture.componentInstance.panelClick.subscribe(e => events.push(e));
+    (fixture.nativeElement.querySelector('.panel') as HTMLElement).click();
+
+    expect(events).toHaveLength(0);
+  });
 });

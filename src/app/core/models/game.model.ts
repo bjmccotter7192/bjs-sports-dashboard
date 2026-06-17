@@ -19,6 +19,23 @@ export interface EspnCompetitor {
   athlete?: { displayName: string; shortName: string };
 }
 
+export interface EspnLeaderEntry {
+  displayValue: string;
+  athlete?: {
+    displayName: string;
+    shortName: string;
+    headshot?: string | { href: string };
+    position?: { abbreviation: string };
+  };
+  team?: { id: string };
+}
+
+export interface EspnLeaderCategory {
+  name: string;
+  displayName: string;
+  leaders: EspnLeaderEntry[];
+}
+
 export interface EspnEvent {
   id: string;
   date: string;
@@ -41,11 +58,26 @@ export interface EspnEvent {
     venue?: { fullName: string };
     broadcasts?: Array<{ names: string[] }>;
     status?: { type?: { state?: string } };
+    leaders?: EspnLeaderCategory[];
   }>;
 }
 
 export interface EspnScoreboardResponse {
   events: EspnEvent[];
+}
+
+// Player stat models
+export interface PlayerStat {
+  playerName: string;
+  shortName: string;
+  headshot?: string;
+  position?: string;
+  statLine: string;
+}
+
+export interface StatCategory {
+  label: string;
+  players: PlayerStat[];
 }
 
 // Normalized team-sport game model
@@ -72,9 +104,18 @@ export interface Game {
   };
   venue?: string;
   broadcast?: string;
+  leaders?: StatCategory[];
 }
 
 // Normalized motorsport race model
+export interface RaceFinisher {
+  position: number;
+  driverName: string;
+  shortName: string;
+  flag?: string;
+  winner: boolean;
+}
+
 export interface Race {
   id: string;
   name: string;
@@ -91,4 +132,5 @@ export interface Race {
     driverName: string;
     teamName: string;
   };
+  topFinishers?: RaceFinisher[];
 }
