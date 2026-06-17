@@ -48,7 +48,7 @@
 
       @if (isPre() || isLive()) {
         <div class="race-time">
-          {{ race()?.date | date: 'MMM d · h:mm a' }}
+          {{ race()?.date | date: 'MMM d · h:mm a' : 'America/Chicago' }} CT
           @if (race()?.broadcast) {
             <span class="broadcast">{{ race()?.broadcast }}</span>
           }

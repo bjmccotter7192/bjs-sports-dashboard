@@ -1,38 +1,18 @@
-/**
- * TodayComponent spec
- *
- * Key patterns used throughout:
- *
- * 1. provideZonelessChangeDetection() — required for Angular v21 zoneless mode.
- *    Without it TestBed throws because the component uses signals/resource().
- *
- * 2. createMockEspnService() — returns vi.fn() stubs for every EspnService method
- *    so HTTP never fires and resource() loaders resolve immediately.
- *
- * 3. "double detectChanges" pattern — after fixture.detectChanges() the resource()
- *    promises are in-flight.  await fixture.whenStable() lets the microtask queue
- *    drain so the loaders resolve, then a second detectChanges() flushes the signal
- *    graph into the DOM.
- */
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
 import { TodayComponent } from './today.component';
 import { EspnService } from '../../core/services/espn.service';
-import { CricketService } from '../../core/services/cricket.service';
 import { createMockEspnService } from '../../testing/mock-espn.service';
-import { createMockCricketService } from '../../testing/mock-cricket.service';
 import { makeGame } from '../../testing/test-fixtures';
-import { MY_TEAMS, MY_SERIES, MY_CRICKET_TEAMS } from '../../core/config/teams.config';
+import { MY_TEAMS, MY_SERIES, MY_GOLF } from '../../core/config/teams.config';
 
 describe('TodayComponent', () => {
   let fixture: ComponentFixture<TodayComponent>;
   let component: TodayComponent;
   let mockEspn: ReturnType<typeof createMockEspnService>;
-  let mockCricket: ReturnType<typeof createMockCricketService>;
 
-  // Helper that fully settles all resource() loaders and re-renders
   async function settle() {
     await fixture.whenStable();
     fixture.detectChanges();
@@ -40,17 +20,13 @@ describe('TodayComponent', () => {
 
   beforeEach(async () => {
     mockEspn = createMockEspnService();
-    mockCricket = createMockCricketService();
 
     await TestBed.configureTestingModule({
       imports: [TodayComponent],
       providers: [
         provideZonelessChangeDetection(),
-        // provideRouter([]) is required because child panel components may use
-        // routerLink or inject the Router indirectly through shared utilities.
         provideRouter([]),
         { provide: EspnService, useValue: mockEspn },
-        { provide: CricketService, useValue: mockCricket },
       ],
     }).compileComponents();
 
@@ -72,47 +48,51 @@ describe('TodayComponent', () => {
 
   // ── Panel grid rendering ────────────────────────────────────────────────────
 
-  it('renders one app-team-panel per tracked team after resources settle', async () => {
+  it('renders one app-team-panel per team after resources settle', async () => {
     fixture.detectChanges();
     await settle();
 
     const panels = fixture.nativeElement.querySelectorAll('app-team-panel');
-    // MY_TEAMS (5) + MY_CRICKET_TEAMS (1) — cricket uses app-team-panel too
-    expect(panels.length).toBe(MY_TEAMS.length + MY_CRICKET_TEAMS.length);
+    expect(panels.length).toBe(MY_TEAMS.length);
   });
 
-  it('renders one app-motorsport-panel per tracked series after resources settle', async () => {
+  it('renders one app-golf-panel for PGA Tour after resources settle', async () => {
+    fixture.detectChanges();
+    await settle();
+
+    const panels = fixture.nativeElement.querySelectorAll('app-golf-panel');
+    expect(panels.length).toBe(MY_GOLF.length);
+  });
+
+  it('renders one app-motorsport-panel per motorsport series after resources settle', async () => {
     fixture.detectChanges();
     await settle();
 
     const panels = fixture.nativeElement.querySelectorAll('app-motorsport-panel');
-    // MY_SERIES has 3 entries — one panel per series
     expect(panels.length).toBe(MY_SERIES.length);
   });
 
-  it('renders the combined panel grid (.teams-grid) with all panels', async () => {
+  it('renders all panels in the grid', async () => {
     fixture.detectChanges();
     await settle();
 
     const grid = fixture.nativeElement.querySelector('.teams-grid');
     expect(grid).not.toBeNull();
 
-    const allPanels = grid.querySelectorAll('app-team-panel, app-motorsport-panel');
-    expect(allPanels.length).toBe(MY_TEAMS.length + MY_SERIES.length + MY_CRICKET_TEAMS.length);
+    const allPanels = grid.querySelectorAll('app-team-panel, app-motorsport-panel, app-golf-panel');
+    expect(allPanels.length).toBe(MY_TEAMS.length + MY_SERIES.length + MY_GOLF.length);
   });
 
-  // ── teamData computed — default (no game) state ────────────────────────────
+  // ── teamData computed ───────────────────────────────────────────────────────
 
   it('teamData() has one entry per team after resources settle', async () => {
     fixture.detectChanges();
     await settle();
 
-    const data = component.teamData();
-    expect(data.length).toBe(MY_TEAMS.length);
+    expect(component.teamData().length).toBe(MY_TEAMS.length);
   });
 
   it('teamData() entries have null game when mock returns no data', async () => {
-    // Default mock: findTeamGame returns null
     fixture.detectChanges();
     await settle();
 
@@ -130,21 +110,14 @@ describe('TodayComponent', () => {
     }
   });
 
-  // ── teamData computed — with a game ────────────────────────────────────────
-
-  it('teamData() carries the game object when findTeamGame returns one', async () => {
-    // Override findTeamGame to return a Yankees game for every call.
-    // In the real app this would only match the NYY team; here we just verify
-    // that the computed properly threads the mock return value through.
+  it('teamData() carries the game when findTeamGame returns one', async () => {
     const game = makeGame({ id: 'test-game-nyy' });
     mockEspn.findTeamGame.mockReturnValue(game);
 
     fixture.detectChanges();
     await settle();
 
-    const data = component.teamData();
-    // Every entry should now carry the mocked game
-    for (const entry of data) {
+    for (const entry of component.teamData()) {
       expect(entry.game).toBe(game);
     }
   });
@@ -155,12 +128,10 @@ describe('TodayComponent', () => {
     fixture.detectChanges();
     await settle();
 
-    const data = component.seriesData();
-    expect(data.length).toBe(MY_SERIES.length);
+    expect(component.seriesData().length).toBe(MY_SERIES.length);
   });
 
   it('seriesData() entries have null race when mock returns no data', async () => {
-    // Default mock: findNextRace returns null
     fixture.detectChanges();
     await settle();
 
@@ -169,12 +140,27 @@ describe('TodayComponent', () => {
     }
   });
 
+  // ── pgaData computed ────────────────────────────────────────────────────────
+
+  it('pgaData() tournament is null when mock returns no data', async () => {
+    fixture.detectChanges();
+    await settle();
+
+    expect(component.pgaData().tournament).toBeNull();
+  });
+
+  it('pgaData() isLoading is false after resources settle', async () => {
+    fixture.detectChanges();
+    await settle();
+
+    expect(component.pgaData().isLoading).toBe(false);
+  });
+
   // ── Date label ─────────────────────────────────────────────────────────────
 
   it('renders a non-empty date label in the view header', () => {
     fixture.detectChanges();
     const dateSpan: HTMLElement = fixture.nativeElement.querySelector('.view-date');
-    // The label is today's date formatted as a long string; just confirm it's present
     expect(dateSpan?.textContent?.trim().length).toBeGreaterThan(0);
   });
 });

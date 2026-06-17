@@ -23,4 +23,9 @@ export const routes: Routes = [
         (m) => m.ScheduleComponent
       ),
   },
+  {
+    path: 'news',
+    loadComponent: () =>
+      import('./features/news/news.component').then((m) => m.NewsComponent),
+  },
 ];

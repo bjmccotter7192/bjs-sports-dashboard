@@ -6,7 +6,8 @@
 </div>
 
 <div class="teams-grid">
-  @for (entry of orderedTeamPanels(); track entry.team.abbreviation) {
+  <!-- Row 1: Yankees, Nationals, PGA Tour -->
+  @for (entry of orderedTeamPanels().slice(0, 2); track entry.team.abbreviation) {
     <app-team-panel
       [team]="entry.team"
       [game]="entry.game"
@@ -14,6 +15,24 @@
       (panelClick)="selectedGame.set($event)"
     />
   }
+  <app-golf-panel
+    [series]="golf"
+    [tournament]="pgaData().tournament"
+    [isLoading]="pgaData().isLoading"
+    (panelClick)="selectedTournament.set($event)"
+  />
+
+  <!-- Row 2: Knicks, Giants, Rangers -->
+  @for (entry of orderedTeamPanels().slice(2); track entry.team.abbreviation) {
+    <app-team-panel
+      [team]="entry.team"
+      [game]="entry.game"
+      [isLoading]="entry.isLoading"
+      (panelClick)="selectedGame.set($event)"
+    />
+  }
+
+  <!-- Row 3: F1, NASCAR, IndyCar -->
   @for (entry of seriesData(); track entry.series.sport) {
     <app-motorsport-panel
       [series]="entry.series"
@@ -36,5 +55,12 @@
   <app-race-stats-modal
     [race]="selectedRace()!.race"
     (close)="selectedRace.set(null)"
+  />
+}
+
+@if (selectedTournament()) {
+  <app-tournament-stats-modal
+    [tournament]="selectedTournament()!"
+    (close)="selectedTournament.set(null)"
   />
 }

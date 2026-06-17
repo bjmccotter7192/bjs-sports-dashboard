@@ -30,7 +30,7 @@
         </div>
 
         <div class="day-games">
-          @for (item of day.items; track item.kind === 'game' ? item.game.id + item.team.abbreviation : item.race.id + item.series.sport) {
+          @for (item of day.items; track item.kind === 'game' ? item.game.id + item.team.abbreviation : item.kind === 'race' ? item.race.id + item.series.sport : item.tournament.id + item.series.sport) {
 
             @if (item.kind === 'game') {
               <div
@@ -91,6 +91,36 @@
 
                 @if (item.race.venue) {
                   <div class="game-venue">{{ item.race.venue }}</div>
+                }
+              </div>
+            }
+
+            @if (item.kind === 'tournament') {
+              <div
+                class="game-row race-row"
+                [style.--primary]="item.series.primaryColor"
+                [style.--secondary]="item.series.secondaryColor"
+              >
+                <div class="team-info">
+                  <span class="sport-dot" [style.background]="item.series.primaryColor"></span>
+                  <span class="my-team-label">{{ item.series.shortName }}</span>
+                  <span class="sport-tag">GOLF</span>
+                </div>
+
+                <div class="race-matchup">
+                  <span class="race-flag">⛳</span>
+                  <span class="matchup-text">{{ item.tournament.name }}</span>
+                </div>
+
+                <div class="game-meta">
+                  <span class="game-time">
+                    {{ item.tournament.startDate | date: 'MMM d' }}
+                    @if (item.tournament.endDate) { – {{ item.tournament.endDate | date: 'MMM d' }} }
+                  </span>
+                </div>
+
+                @if (item.tournament.venue) {
+                  <div class="game-venue">{{ item.tournament.venue }}</div>
                 }
               </div>
             }

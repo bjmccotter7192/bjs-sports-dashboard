@@ -39,6 +39,7 @@ export interface EspnLeaderCategory {
 export interface EspnEvent {
   id: string;
   date: string;
+  endDate?: string;
   name: string;
   shortName: string;
   status: {
@@ -105,6 +106,40 @@ export interface Game {
   venue?: string;
   broadcast?: string;
   leaders?: StatCategory[];
+}
+
+// Golf tournament models
+export interface TournamentEntry {
+  position: number;
+  name: string;
+  shortName: string;
+  score: string;  // to-par, e.g. "-17", "E", "+3"
+}
+
+export interface Tournament {
+  id: string;
+  name: string;
+  shortName: string;
+  startDate: Date;
+  endDate?: Date;
+  status: {
+    state: 'pre' | 'in' | 'post';
+    detail: string;
+  };
+  venue?: string;
+  leaderboard?: TournamentEntry[];
+}
+
+// News article model
+export interface NewsArticle {
+  id: string;
+  headline: string;
+  description: string;
+  image?: string;
+  url: string;
+  published: Date;
+  sourceName: string;
+  sourceColor: string;
 }
 
 // Normalized motorsport race model

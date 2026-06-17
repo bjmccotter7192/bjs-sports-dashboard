@@ -1,0 +1,72 @@
+<div class="view-header">
+  <div class="header-text">
+    <h1 class="view-title">News</h1>
+    <span class="view-date">Latest from your teams &amp; series</span>
+  </div>
+</div>
+
+<div class="filter-bar">
+  @for (src of filterSources; track src.key) {
+    <button
+      class="filter-btn"
+      [class.active]="selectedFilter() === src.key"
+      [style.--source-color]="src.color"
+      (click)="selectedFilter.set(src.key)"
+    >{{ src.label }}</button>
+  }
+</div>
+
+@if (isLoading()) {
+  <div class="news-list">
+    @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+      <div class="news-card skeleton-card">
+        <div class="skeleton card-image-placeholder"></div>
+        <div class="card-content">
+          <div class="skeleton skeleton-badge"></div>
+          <div class="skeleton skeleton-headline"></div>
+          <div class="skeleton skeleton-desc"></div>
+        </div>
+      </div>
+    }
+  </div>
+} @else if (!filteredArticles().length) {
+  <div class="empty-state">
+    <span class="empty-icon">📰</span>
+    <p>No articles found.</p>
+  </div>
+} @else {
+  <div class="news-list">
+    @for (article of filteredArticles(); track article.id) {
+      <a
+        class="news-card"
+        [href]="article.url"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        @if (article.image) {
+          <img
+            [src]="article.image"
+            [alt]="article.headline"
+            class="card-image"
+            loading="lazy"
+          />
+        } @else {
+          <div class="card-image card-image--placeholder"></div>
+        }
+        <div class="card-content">
+          <div class="card-meta">
+            <span
+              class="source-badge"
+              [style.background]="article.sourceColor"
+            >{{ article.sourceName }}</span>
+            <span class="time-ago">{{ timeAgo(article.published) }}</span>
+          </div>
+          <div class="card-headline">{{ article.headline }}</div>
+          @if (article.description) {
+            <div class="card-description">{{ article.description }}</div>
+          }
+        </div>
+      </a>
+    }
+  </div>
+}

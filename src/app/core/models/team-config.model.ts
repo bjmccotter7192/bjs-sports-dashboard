@@ -2,13 +2,14 @@ export type SportLeague =
   | 'basketball/nba'
   | 'football/nfl'
   | 'baseball/mlb'
-  | 'hockey/nhl'
-  | 'cricket';
+  | 'hockey/nhl';
 
 export type MotorsportLeague =
   | 'racing/f1'
   | 'racing/nascar-premier'
   | 'racing/irl';
+
+export type GolfLeague = 'golf/pga';
 
 export interface TeamConfig {
   kind: 'team';
@@ -26,6 +27,15 @@ export interface SeriesConfig {
   name: string;
   shortName: string;
   sport: MotorsportLeague;
+  primaryColor: string;
+  secondaryColor: string;
+}
+
+export interface GolfSeriesConfig {
+  kind: 'golf';
+  name: string;
+  shortName: string;
+  sport: GolfLeague;
   primaryColor: string;
   secondaryColor: string;
 }

@@ -1,15 +1,13 @@
-import { TeamConfig, SeriesConfig } from '../models/team-config.model';
+import { TeamConfig, SeriesConfig, GolfSeriesConfig } from '../models/team-config.model';
 
-export const MY_CRICKET_TEAMS: TeamConfig[] = [
+export const MY_GOLF: GolfSeriesConfig[] = [
   {
-    kind: 'team',
-    espnId: '137151', // TheSportsDB ID — not an ESPN ID
-    abbreviation: 'WI',
-    name: 'West Indies Cricket',
-    shortName: 'West Indies',
-    sport: 'cricket',
-    primaryColor: '#7B0041',
-    secondaryColor: '#FFD700',
+    kind: 'golf',
+    name: 'PGA Tour',
+    shortName: 'PGA',
+    sport: 'golf/pga',
+    primaryColor: '#004F2D',
+    secondaryColor: '#C9A84C',
   },
 ];
 

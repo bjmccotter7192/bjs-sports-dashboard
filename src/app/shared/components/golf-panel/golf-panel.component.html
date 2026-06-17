@@ -1,0 +1,61 @@
+<div
+  class="panel"
+  [style.--primary]="series().primaryColor"
+  [style.--secondary]="series().secondaryColor"
+  [class.clickable]="isClickable()"
+  (click)="onPanelClick()"
+>
+  <div class="panel-header">
+    <span class="sport-badge">GOLF</span>
+    <span class="series-name">{{ series().name }}</span>
+    @if (isLive()) {
+      <span class="result-badge live">
+        <span class="live-dot"></span>LIVE
+      </span>
+    }
+  </div>
+
+  @if (isLoading()) {
+    <div class="panel-body loading">
+      <div class="skeleton"></div>
+    </div>
+  } @else if (!tournament()) {
+    <div class="panel-body no-data">
+      <span class="no-data-icon">⛳</span>
+      <span class="no-data-text">No tournament data</span>
+    </div>
+  } @else {
+    <div class="panel-body">
+      <div class="state-label" [class.live]="isLive()" [class.upcoming]="isPre()">
+        {{ stateLabel() }}
+      </div>
+
+      <div class="tournament-name">{{ tournament()?.name }}</div>
+
+      @if (tournament()?.venue) {
+        <div class="venue">📍 {{ tournament()?.venue }}</div>
+      }
+
+      @if (isPre()) {
+        <div class="dates">
+          {{ tournament()?.startDate | date: 'MMM d' }}
+          @if (tournament()?.endDate) { – {{ tournament()?.endDate | date: 'MMM d, y' }} }
+        </div>
+      }
+
+      @if ((isPost() || isLive()) && top3().length) {
+        <div class="leaderboard">
+          @for (entry of top3(); track entry.position) {
+            <div class="leaderboard-row" [class.leader]="entry.position === 1">
+              <span class="pos">
+                @if (entry.position === 1 && isPost()) { 🏆 } @else { {{ entry.position }} }
+              </span>
+              <span class="player-name">{{ entry.shortName }}</span>
+              <span class="score">{{ entry.score }}</span>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

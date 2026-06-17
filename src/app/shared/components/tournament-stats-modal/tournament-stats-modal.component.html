@@ -1,0 +1,36 @@
+<div class="modal-backdrop" (click)="close.emit()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div class="modal-title">
+        <span class="tournament-name">{{ tournament().name }}</span>
+        <span class="tournament-detail">{{ tournament().status.detail }}</span>
+      </div>
+      <button class="close-btn" (click)="close.emit()" aria-label="Close">✕</button>
+    </div>
+
+    <div class="modal-body">
+      @if (!tournament().leaderboard?.length) {
+        <p class="no-stats">No leaderboard available.</p>
+      } @else {
+        <div class="leaderboard-header">
+          <span>Pos</span>
+          <span>Player</span>
+          <span>Score</span>
+        </div>
+        @for (entry of tournament().leaderboard; track entry.position) {
+          <div class="leaderboard-row" [class.leader]="entry.position === 1">
+            <span class="position" [class.gold]="entry.position === 1">
+              {{ entry.position }}
+            </span>
+            <span class="player-name">{{ entry.name }}</span>
+            <span class="score" [class.under]="entry.score.startsWith('-')" [class.even]="entry.score === 'E'">
+              {{ entry.score }}
+            </span>
+          </div>
+        }
+      }
+    </div>
+
+  </div>
+</div>

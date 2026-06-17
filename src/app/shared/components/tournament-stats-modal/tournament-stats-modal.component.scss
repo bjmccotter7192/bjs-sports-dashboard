@@ -1,0 +1,133 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  gap: 1rem;
+
+  .modal-title {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .tournament-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .tournament-detail {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+    line-height: 1;
+    flex-shrink: 0;
+
+    &:hover {
+      color: var(--text-primary);
+      background: var(--bg-panel-body);
+    }
+  }
+}
+
+.modal-body {
+  overflow-y: auto;
+  padding: 0.75rem 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.no-stats {
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.leaderboard-header {
+  display: grid;
+  grid-template-columns: 36px 1fr 52px;
+  gap: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 52px;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  background: var(--bg-panel-body);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid transparent;
+
+  &.leader {
+    border-left-color: #C9A84C;
+    background: color-mix(in srgb, #C9A84C 8%, var(--bg-panel-body));
+  }
+
+  .position {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    text-align: center;
+
+    &.gold { color: #C9A84C; }
+  }
+
+  .player-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .score {
+    font-size: 0.9rem;
+    font-weight: 800;
+    text-align: right;
+    color: var(--text-secondary);
+
+    &.under { color: #10b981; }
+    &.even  { color: var(--text-secondary); }
+  }
+}

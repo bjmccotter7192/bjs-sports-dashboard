@@ -1,14 +1,14 @@
 import { Component, computed, inject, resource } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { EspnService, formatDateYMD } from '../../core/services/espn.service';
-import { CricketService } from '../../core/services/cricket.service';
-import { MY_TEAMS, MY_SERIES, MY_CRICKET_TEAMS } from '../../core/config/teams.config';
-import { Game, Race, EspnScoreboardResponse } from '../../core/models/game.model';
-import { TeamConfig, SeriesConfig, MotorsportLeague } from '../../core/models/team-config.model';
+import { MY_TEAMS, MY_SERIES, MY_GOLF } from '../../core/config/teams.config';
+import { Game, Race, Tournament, EspnScoreboardResponse } from '../../core/models/game.model';
+import { TeamConfig, SeriesConfig, GolfSeriesConfig, MotorsportLeague } from '../../core/models/team-config.model';
 
 export type ScheduleItem =
-  | { kind: 'game'; game: Game; team: TeamConfig }
-  | { kind: 'race'; race: Race; series: SeriesConfig };
+  | { kind: 'game';       game: Game;             team: TeamConfig }
+  | { kind: 'race';       race: Race;             series: SeriesConfig }
+  | { kind: 'tournament'; tournament: Tournament; series: GolfSeriesConfig };
 
 export interface ScheduleDay {
   dateLabel: string;
@@ -26,18 +26,17 @@ const EMPTY: EspnScoreboardResponse = { events: [] };
 })
 export class ScheduleComponent {
   private espn = inject(EspnService);
-  private cricketService = inject(CricketService);
 
   private rangeStart = new Date();
-  private rangeEnd = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d; })();
+  private rangeEnd   = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d; })();
   private motorsportDateRange = `${formatDateYMD(this.rangeStart)}-${formatDateYMD(this.rangeEnd)}`;
 
   // ── Per-team schedule resources (full season, no 100-event ESPN cap) ──
-  private knicks   = resource({ loader: () => this.espn.getTeamSchedule('basketball/nba', MY_TEAMS[0].espnId).catch(() => EMPTY) });
-  private giants   = resource({ loader: () => this.espn.getTeamSchedule('football/nfl',   MY_TEAMS[1].espnId).catch(() => EMPTY) });
-  private yankees  = resource({ loader: () => this.espn.getTeamSchedule('baseball/mlb',   MY_TEAMS[2].espnId).catch(() => EMPTY) });
-  private nats     = resource({ loader: () => this.espn.getTeamSchedule('baseball/mlb',   MY_TEAMS[3].espnId).catch(() => EMPTY) });
-  private rangers  = resource({ loader: () => this.espn.getTeamSchedule('hockey/nhl',     MY_TEAMS[4].espnId).catch(() => EMPTY) });
+  private knicks  = resource({ loader: () => this.espn.getTeamSchedule('basketball/nba', MY_TEAMS[0].espnId).catch(() => EMPTY) });
+  private giants  = resource({ loader: () => this.espn.getTeamSchedule('football/nfl',   MY_TEAMS[1].espnId).catch(() => EMPTY) });
+  private yankees = resource({ loader: () => this.espn.getTeamSchedule('baseball/mlb',   MY_TEAMS[2].espnId).catch(() => EMPTY) });
+  private nats    = resource({ loader: () => this.espn.getTeamSchedule('baseball/mlb',   MY_TEAMS[3].espnId).catch(() => EMPTY) });
+  private rangers = resource({ loader: () => this.espn.getTeamSchedule('hockey/nhl',     MY_TEAMS[4].espnId).catch(() => EMPTY) });
 
   private teamResources = [
     { team: MY_TEAMS[0], res: this.knicks  },
@@ -52,15 +51,13 @@ export class ScheduleComponent {
   private nascar  = resource({ loader: () => this.espn.getScoreboard('racing/nascar-premier', this.motorsportDateRange).catch(() => EMPTY) });
   private indycar = resource({ loader: () => this.espn.getScoreboard('racing/irl',            this.motorsportDateRange).catch(() => EMPTY) });
 
-  // ── Cricket resource (TheSportsDB — next scheduled match) ───────────
-  private wiCricket = resource({
-    loader: () => this.cricketService.getNextMatch().catch(() => null),
-  });
+  // ── PGA Tour resource ───────────────────────────────────────────────
+  private pga = resource({ loader: () => this.espn.getScoreboard('golf/pga', this.motorsportDateRange).catch(() => EMPTY) });
 
   isLoading = computed(() =>
     this.teamResources.some(r => r.res.isLoading()) ||
     this.f1.isLoading() || this.nascar.isLoading() || this.indycar.isLoading() ||
-    this.wiCricket.isLoading()
+    this.pga.isLoading()
   );
 
   scheduleDays = computed((): ScheduleDay[] => {
@@ -72,12 +69,6 @@ export class ScheduleComponent {
       for (const game of games) {
         items.push({ kind: 'game', game, team });
       }
-    }
-
-    // ── Cricket ──
-    const cricketGame = this.wiCricket.value();
-    if (cricketGame && cricketGame.status.state === 'pre') {
-      items.push({ kind: 'game', game: cricketGame, team: MY_CRICKET_TEAMS[0] });
     }
 
     // ── Races ──
@@ -94,10 +85,17 @@ export class ScheduleComponent {
       }
     }
 
+    // ── PGA Tour tournaments ──
+    for (const tournament of this.espn.getAllUpcomingTournaments(this.pga.value())) {
+      items.push({ kind: 'tournament', tournament, series: MY_GOLF[0] });
+    }
+
     // ── Group by date ──
     const grouped = new Map<string, ScheduleItem[]>();
     for (const item of items) {
-      const date = item.kind === 'game' ? item.game.date : item.race.date;
+      const date = item.kind === 'game' ? item.game.date
+        : item.kind === 'race' ? item.race.date
+        : item.tournament.startDate;
       const key = formatDateYMD(date);
       grouped.set(key, [...(grouped.get(key) ?? []), item]);
     }

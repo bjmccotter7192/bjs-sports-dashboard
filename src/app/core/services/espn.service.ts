@@ -10,10 +10,22 @@ import {
   GameTeam,
   Race,
   RaceFinisher,
+  Tournament,
+  TournamentEntry,
   StatCategory,
   PlayerStat,
+  NewsArticle,
 } from '../models/game.model';
-import { SportLeague, MotorsportLeague } from '../models/team-config.model';
+import { SportLeague, MotorsportLeague, GolfLeague } from '../models/team-config.model';
+
+interface EspnRawNewsArticle {
+  id: number;
+  headline: string;
+  description?: string;
+  images?: Array<{ url: string }>;
+  links?: { web?: { href: string } };
+  published: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class EspnService {
@@ -22,7 +34,7 @@ export class EspnService {
     'https://site.api.espn.com/apis/site/v2/sports';
 
   getScoreboard(
-    sport: SportLeague | MotorsportLeague,
+    sport: SportLeague | MotorsportLeague | GolfLeague,
     date?: string
   ): Promise<EspnScoreboardResponse> {
     const params: Record<string, string> = {};
@@ -426,6 +438,98 @@ export class EspnService {
             }
           : undefined,
       topFinishers: topFinishers.length ? topFinishers : undefined,
+    };
+  }
+
+  // ── Golf / PGA Tour ───────────────────────────────────────────────────
+  parseTournament(event: EspnEvent): Tournament {
+    const comp = event.competitions[0];
+    const competitors = (comp?.competitors ?? []) as any[];
+    const sorted = [...competitors].sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+
+    const leaderboard: TournamentEntry[] = sorted.slice(0, 10).map(c => ({
+      position: c.order ?? 0,
+      name: c.athlete?.displayName ?? 'Unknown',
+      shortName: c.athlete?.shortName ?? '',
+      score: c.score ?? 'E',
+    }));
+
+    return {
+      id: event.id,
+      name: event.name,
+      shortName: event.shortName,
+      startDate: new Date(event.date.slice(0, 10) + 'T12:00:00'),
+      endDate: event.endDate ? new Date(event.endDate.slice(0, 10) + 'T12:00:00') : undefined,
+      status: {
+        state: event.status.type.state,
+        detail: event.status.type.shortDetail ?? event.status.type.description ?? '',
+      },
+      venue: comp?.venue?.fullName,
+      leaderboard: leaderboard.length ? leaderboard : undefined,
+    };
+  }
+
+  findCurrentTournament(scoreboard?: EspnScoreboardResponse): Tournament | null {
+    if (!scoreboard?.events?.length) return null;
+    const live = scoreboard.events.find(e => e.status.type.state === 'in');
+    if (live) return this.parseTournament(live);
+    const upcoming = [...scoreboard.events]
+      .filter(e => e.status.type.state === 'pre')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return upcoming.length ? this.parseTournament(upcoming[0]) : null;
+  }
+
+  findLastTournament(scoreboard?: EspnScoreboardResponse): Tournament | null {
+    if (!scoreboard?.events?.length) return null;
+    const completed = [...scoreboard.events]
+      .filter(e => e.status.type.state === 'post')
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return completed.length ? this.parseTournament(completed[0]) : null;
+  }
+
+  getAllUpcomingTournaments(scoreboard?: EspnScoreboardResponse): Tournament[] {
+    if (!scoreboard?.events?.length) return [];
+    return [...scoreboard.events]
+      .filter(e => e.status.type.state === 'pre')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .map(e => this.parseTournament(e));
+  }
+
+  // ── News ──────────────────────────────────────────────────────────────
+  async getNews(
+    sport: string,
+    sourceName: string,
+    sourceColor: string,
+    teamId?: string,
+    limit = 10
+  ): Promise<NewsArticle[]> {
+    const url = teamId
+      ? `${this.baseUrl}/${sport}/teams/${teamId}/news`
+      : `${this.baseUrl}/${sport}/news`;
+    const data = await firstValueFrom(
+      this.http.get<{ articles?: EspnRawNewsArticle[]; feed?: EspnRawNewsArticle[] }>(
+        url, { params: { limit: limit.toString() } }
+      )
+    );
+    return (data.articles ?? data.feed ?? []).map(a =>
+      this.parseNewsArticle(a, sourceName, sourceColor)
+    );
+  }
+
+  private parseNewsArticle(
+    raw: EspnRawNewsArticle,
+    sourceName: string,
+    sourceColor: string
+  ): NewsArticle {
+    return {
+      id: raw.id.toString(),
+      headline: raw.headline,
+      description: raw.description ?? '',
+      image: raw.images?.[0]?.url,
+      url: raw.links?.web?.href ?? '',
+      published: new Date(raw.published),
+      sourceName,
+      sourceColor,
     };
   }
 }

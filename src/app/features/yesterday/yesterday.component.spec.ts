@@ -1,33 +1,18 @@
-/**
- * YesterdayComponent spec
- *
- * Mirrors the TodayComponent tests but exercises the "Last Played" variant:
- *  - Uses findLastPlayedGame (not findTeamGame) to populate teamData()
- *  - Uses findLastRace (not findNextRace) to populate seriesData()
- *  - Fetches a 14-day rolling window instead of a single date
- *
- * The same "double detectChanges" settle pattern is used — see today.component.spec.ts
- * for a full explanation.
- */
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 
 import { YesterdayComponent } from './yesterday.component';
 import { EspnService } from '../../core/services/espn.service';
-import { CricketService } from '../../core/services/cricket.service';
 import { createMockEspnService } from '../../testing/mock-espn.service';
-import { createMockCricketService } from '../../testing/mock-cricket.service';
 import { makeGame, makeRace } from '../../testing/test-fixtures';
-import { MY_TEAMS, MY_SERIES, MY_CRICKET_TEAMS } from '../../core/config/teams.config';
+import { MY_TEAMS, MY_SERIES, MY_GOLF } from '../../core/config/teams.config';
 
 describe('YesterdayComponent', () => {
   let fixture: ComponentFixture<YesterdayComponent>;
   let component: YesterdayComponent;
   let mockEspn: ReturnType<typeof createMockEspnService>;
-  let mockCricket: ReturnType<typeof createMockCricketService>;
 
-  // Drain microtasks and re-render so resource() loaders resolve
   async function settle() {
     await fixture.whenStable();
     fixture.detectChanges();
@@ -35,7 +20,6 @@ describe('YesterdayComponent', () => {
 
   beforeEach(async () => {
     mockEspn = createMockEspnService();
-    mockCricket = createMockCricketService();
 
     await TestBed.configureTestingModule({
       imports: [YesterdayComponent],
@@ -43,7 +27,6 @@ describe('YesterdayComponent', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: EspnService, useValue: mockEspn },
-        { provide: CricketService, useValue: mockCricket },
       ],
     }).compileComponents();
 
@@ -71,16 +54,23 @@ describe('YesterdayComponent', () => {
 
   // ── Panel grid rendering ────────────────────────────────────────────────────
 
-  it('renders one app-team-panel per tracked team after resources settle', async () => {
+  it('renders one app-team-panel per team after resources settle', async () => {
     fixture.detectChanges();
     await settle();
 
     const panels = fixture.nativeElement.querySelectorAll('app-team-panel');
-    // MY_TEAMS (5) + MY_CRICKET_TEAMS (1) — cricket uses app-team-panel too
-    expect(panels.length).toBe(MY_TEAMS.length + MY_CRICKET_TEAMS.length);
+    expect(panels.length).toBe(MY_TEAMS.length);
   });
 
-  it('renders one app-motorsport-panel per tracked series after resources settle', async () => {
+  it('renders one app-golf-panel for PGA Tour after resources settle', async () => {
+    fixture.detectChanges();
+    await settle();
+
+    const panels = fixture.nativeElement.querySelectorAll('app-golf-panel');
+    expect(panels.length).toBe(MY_GOLF.length);
+  });
+
+  it('renders one app-motorsport-panel per series after resources settle', async () => {
     fixture.detectChanges();
     await settle();
 
@@ -92,11 +82,10 @@ describe('YesterdayComponent', () => {
     fixture.detectChanges();
     await settle();
 
-    const grid = fixture.nativeElement.querySelector('.teams-grid');
-    expect(grid).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.teams-grid')).not.toBeNull();
   });
 
-  // ── teamData computed — default (no game) state ────────────────────────────
+  // ── teamData computed ───────────────────────────────────────────────────────
 
   it('teamData() returns one entry per team', async () => {
     fixture.detectChanges();
@@ -106,7 +95,6 @@ describe('YesterdayComponent', () => {
   });
 
   it('teamData() entries have null game when findLastPlayedGame returns null', async () => {
-    // Default mock behaviour — findLastPlayedGame returns null
     fixture.detectChanges();
     await settle();
 
@@ -125,16 +113,12 @@ describe('YesterdayComponent', () => {
   });
 
   it('uses findLastPlayedGame (not findTeamGame) to resolve game data', async () => {
-    // This ensures the Yesterday view's "most recent completed" semantics are wired
-    // correctly, not accidentally sharing logic with Today.
     fixture.detectChanges();
     await settle();
 
     expect(mockEspn.findLastPlayedGame).toHaveBeenCalled();
     expect(mockEspn.findTeamGame).not.toHaveBeenCalled();
   });
-
-  // ── teamData computed — with a game ────────────────────────────────────────
 
   it('teamData() carries a game when findLastPlayedGame returns one', async () => {
     const game = makeGame({
@@ -151,7 +135,7 @@ describe('YesterdayComponent', () => {
     }
   });
 
-  // ── seriesData computed — default (no race) state ─────────────────────────
+  // ── seriesData computed ─────────────────────────────────────────────────────
 
   it('seriesData() returns one entry per series', async () => {
     fixture.detectChanges();
@@ -161,7 +145,6 @@ describe('YesterdayComponent', () => {
   });
 
   it('seriesData() entries have null race when findLastRace returns null', async () => {
-    // Default mock behaviour
     fixture.detectChanges();
     await settle();
 
@@ -171,15 +154,12 @@ describe('YesterdayComponent', () => {
   });
 
   it('uses findLastRace (not findNextRace) to resolve race data', async () => {
-    // Yesterday shows the most recently completed race, not the upcoming one.
     fixture.detectChanges();
     await settle();
 
     expect(mockEspn.findLastRace).toHaveBeenCalled();
     expect(mockEspn.findNextRace).not.toHaveBeenCalled();
   });
-
-  // ── seriesData computed — with a race ─────────────────────────────────────
 
   it('seriesData() carries a race when findLastRace returns one', async () => {
     const race = makeRace({
@@ -194,5 +174,21 @@ describe('YesterdayComponent', () => {
     for (const entry of component.seriesData()) {
       expect(entry.race).toBe(race);
     }
+  });
+
+  // ── pgaData computed ────────────────────────────────────────────────────────
+
+  it('pgaData() tournament is null when mock returns no data', async () => {
+    fixture.detectChanges();
+    await settle();
+
+    expect(component.pgaData().tournament).toBeNull();
+  });
+
+  it('pgaData() isLoading is false after resources settle', async () => {
+    fixture.detectChanges();
+    await settle();
+
+    expect(component.pgaData().isLoading).toBe(false);
   });
 });
