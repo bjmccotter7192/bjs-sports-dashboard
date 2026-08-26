@@ -443,7 +443,7 @@ export class EspnService {
 
   // ── Golf / PGA Tour ───────────────────────────────────────────────────
   parseTournament(event: EspnEvent): Tournament {
-    const comp = event.competitions[0];
+    const comp = event.competitions?.[0];
     const competitors = (comp?.competitors ?? []) as any[];
     const sorted = [...competitors].sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
 
