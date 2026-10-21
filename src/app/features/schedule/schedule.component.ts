@@ -6,6 +6,9 @@ import { EspnService, formatDateYMD } from '../../core/services/espn.service';
 import { DashboardConfigService } from '../../core/services/dashboard-config.service';
 import { fetchAll } from '../../core/utils/fetch-all';
 import { leagueLabel } from '../../core/config/leagues.config';
+import { dateKeyInZone } from '../../core/config/time-zones';
+import { TimeZoneService } from '../../core/services/time-zone.service';
+import { ZonedTimePipe } from '../../shared/pipes/zoned-time.pipe';
 import { Game, Race, Tournament, EspnScoreboardResponse } from '../../core/models/game.model';
 import { TeamConfig, SeriesConfig, GolfSeriesConfig, League } from '../../core/models/team-config.model';
 
@@ -24,13 +27,14 @@ const EMPTY: EspnScoreboardResponse = { events: [] };
 
 @Component({
   selector: 'app-schedule',
-  imports: [DatePipe, EmptyConfigComponent],
+  imports: [DatePipe, EmptyConfigComponent, ZonedTimePipe],
   templateUrl: './schedule.component.html',
   styleUrl: './schedule.component.scss',
 })
 export class ScheduleComponent {
   private espn = inject(EspnService);
   private config = inject(DashboardConfigService).config;
+  readonly zone = inject(TimeZoneService).zone;
   readonly isEmpty = computed(() => isEmptyConfig(this.config()));
 
   private rangeStart = new Date();
@@ -93,12 +97,14 @@ export class ScheduleComponent {
     }
 
     // ── Group by date ──
+    // Games and races group by their calendar day in the display zone. Tournament
+    // dates are already anchored to local noon by parseTournament(), so keep those local.
+    const zone = this.zone();
     const grouped = new Map<string, ScheduleItem[]>();
     for (const item of items) {
-      const date = item.kind === 'game' ? item.game.date
-        : item.kind === 'race' ? item.race.date
-        : item.tournament.startDate;
-      const key = formatDateYMD(date);
+      const key = item.kind === 'game' ? dateKeyInZone(item.game.date, zone)
+        : item.kind === 'race' ? dateKeyInZone(item.race.date, zone)
+        : formatDateYMD(item.tournament.startDate);
       grouped.set(key, [...(grouped.get(key) ?? []), item]);
     }
 

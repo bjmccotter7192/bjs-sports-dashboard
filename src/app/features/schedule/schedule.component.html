@@ -55,7 +55,7 @@
                 </div>
 
                 <div class="game-meta">
-                  <span class="game-time">{{ item.game.date | date: 'h:mm a' }}</span>
+                  <span class="game-time">{{ item.game.date | zonedTime: zone() : 'time' }}</span>
                   @if (item.game.broadcast) {
                     <span class="game-broadcast">{{ item.game.broadcast }}</span>
                   }
@@ -85,7 +85,7 @@
                 </div>
 
                 <div class="game-meta">
-                  <span class="game-time">{{ item.race.date | date: 'h:mm a' }}</span>
+                  <span class="game-time">{{ item.race.date | zonedTime: zone() : 'time' }}</span>
                   @if (item.race.broadcast) {
                     <span class="game-broadcast">{{ item.race.broadcast }}</span>
                   }

@@ -1,16 +1,20 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { TeamConfig, SportLeague } from '../../../core/models/team-config.model';
 import { Game } from '../../../core/models/game.model';
 import { leagueInfo, leagueLabel } from '../../../core/config/leagues.config';
+import { TimeZoneService } from '../../../core/services/time-zone.service';
+import { ZonedTimePipe } from '../../pipes/zoned-time.pipe';
 
 @Component({
   selector: 'app-team-panel',
-  imports: [DatePipe],
+  imports: [DatePipe, ZonedTimePipe],
   templateUrl: './team-panel.component.html',
   styleUrl: './team-panel.component.scss',
 })
 export class TeamPanelComponent {
+  readonly zone = inject(TimeZoneService).zone;
+
   team = input.required<TeamConfig>();
   game = input<Game | null>(null);
   isLoading = input<boolean>(false);

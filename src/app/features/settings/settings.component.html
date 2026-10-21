@@ -23,6 +23,19 @@
 
 <section class="settings-section">
   <div class="section-header">
+    <h2>Time zone</h2>
+  </div>
+  <select class="search tz-select" (change)="setTimeZone($event)" aria-label="Time zone">
+    <option value="" [selected]="!tz.override()">Automatic: {{ tz.browserZone }} ({{ tz.browserLabel }})</option>
+    @for (opt of tz.options; track opt.zone) {
+      <option [value]="opt.zone" [selected]="tz.override() === opt.zone">{{ opt.name }} ({{ opt.label }})</option>
+    }
+  </select>
+  <p class="hint">Game and race times are shown in {{ tz.label() }}. Automatic follows this device's setting.</p>
+</section>
+
+<section class="settings-section">
+  <div class="section-header">
     <h2>Your teams</h2>
     <span class="count" [class.full]="isFull()">{{ teams().length }} / {{ maxTeams }}</span>
   </div>

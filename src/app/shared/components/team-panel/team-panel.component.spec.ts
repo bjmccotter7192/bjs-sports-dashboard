@@ -17,6 +17,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { TeamPanelComponent } from './team-panel.component';
 import { TeamConfig } from '../../../core/models/team-config.model';
 import { makeGame } from '../../../testing/test-fixtures';
+import { TimeZoneService } from '../../../core/services/time-zone.service';
 
 // ── Shared fixture config ────────────────────────────────────────────────────
 
@@ -430,5 +431,36 @@ describe('TeamPanelComponent', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.result-badge.loss')).not.toBeNull();
     expect(fixture.nativeElement.querySelector('.result-badge.draw')).toBeNull();
+  });
+
+  // ── Time zone ────────────────────────────────────────────────────────────
+
+  afterEach(() => localStorage.clear());
+
+  function preGame() {
+    return makeGame({
+      homeTeam: { ...makeGame().homeTeam, id: '18' },
+      date: new Date('2026-06-22T23:05:00Z'),
+      status: { state: 'pre', description: 'Scheduled', detail: 'Scheduled' },
+    });
+  }
+
+  it('shows pre-game time in the display zone with its label', () => {
+    TestBed.inject(TimeZoneService).setOverride('America/New_York');
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', preGame());
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.game-date')?.textContent?.trim()).toBe('Jun 22 · 7:05 PM ET');
+  });
+
+  it('re-renders when the zone override changes', () => {
+    const tz = TestBed.inject(TimeZoneService);
+    tz.setOverride('America/New_York');
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', preGame());
+    fixture.detectChanges();
+    tz.setOverride('America/Los_Angeles');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.game-date')?.textContent?.trim()).toBe('Jun 22 · 4:05 PM PT');
   });
 });

@@ -1,15 +1,19 @@
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { SeriesConfig, MotorsportLeague } from '../../../core/models/team-config.model';
 import { Race } from '../../../core/models/game.model';
+import { TimeZoneService } from '../../../core/services/time-zone.service';
+import { ZonedTimePipe } from '../../pipes/zoned-time.pipe';
 
 @Component({
   selector: 'app-motorsport-panel',
-  imports: [DatePipe],
+  imports: [DatePipe, ZonedTimePipe],
   templateUrl: './motorsport-panel.component.html',
   styleUrl: './motorsport-panel.component.scss',
 })
 export class MotorsportPanelComponent {
+  readonly zone = inject(TimeZoneService).zone;
+
   series = input.required<SeriesConfig>();
   race = input<Race | null>(null);
   isLoading = input<boolean>(false);
