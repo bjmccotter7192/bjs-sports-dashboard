@@ -111,8 +111,14 @@ Each F1 event has multiple `competitions` inside one event object: FP1, FP2, FP3
 ### PGA Tour tournament dates
 ESPN stores tournament dates as UTC timestamps (e.g. `"2026-06-18T04:00Z"`). Parsing with `new Date(dateString)` and displaying in US Central time (UTC-5) rolls the date back by one day — June 18 4:00 AM UTC = June 17 11:00 PM CDT. `parseTournament()` strips the time component and anchors to local noon: `new Date(event.date.slice(0, 10) + 'T12:00:00')`. This applies to both `startDate` and `endDate`. Unlike F1, `competitions[0]` is the correct competition for golf — there's no multi-session structure.
 
-### Time display — always Central
-All pre-game times use Angular's `DatePipe` with `'America/Chicago'` as the explicit timezone and a static `CT` label (e.g. `"Jun 22 · 1:05 PM CT"`). Do not rely on the browser locale or the `z` format token — `z` falls back to `GMT-5` in Linux/k8s environments that lack IANA abbreviation data. ESPN's raw `status.detail` string (which says "EDT") is suppressed for pre-game panels; the DatePipe output is the canonical time display.
+### Time display — browser zone, with an override
+Game and race times use `TimeZoneService.zone`: a saved override from Settings (`sports-dashboard:timezone`, which must be one of `TIME_ZONE_OPTIONS`), otherwise the browser's IANA zone. Render them with the `zonedTime` pipe, e.g. `{{ date | zonedTime: zone() }}` → `"Jun 22 · 1:05 PM ET"`, or `: 'time'` → `"1:05 PM ET"`.
+
+- **Don't pass zones to `DatePipe`.** It only understands offsets and abbreviations: `date: ... : 'America/Chicago'` silently falls back to the browser zone. All zone-aware formatting goes through `Intl` in `core/config/time-zones.ts`.
+- Labels are stable across DST. Intl's `EDT`/`EST` both become `ET`, and so on for CT/MT/PT/AKT/HT. Curated options have fixed labels (London → `UK`, since en-US gives `GMT+1`). Zones with no US name show Intl's short name (`GMT-5`).
+- Schedule groups games and races by `dateKeyInZone()`, so a 9:30 PM PT game stays on its West Coast day. Tournament dates are noon-anchored local dates (see PGA above) and still use `formatDateYMD`.
+- Date-only displays (`'MMMM d, y'`) still use `DatePipe`, because the zone doesn't matter there.
+- ESPN's raw `status.detail` (which says "EDT") is suppressed for pre-game panels. The `zonedTime` output is the canonical time display.
 
 ### Match teams by id, not abbreviation
 Games are matched to configured teams by ESPN team id (`TeamConfig.espnId` ↔ `competitor.team.id`). Abbreviations are display-only — ESPN's are inconsistent (the Knicks are `'NY'`, not `'NYK'`).

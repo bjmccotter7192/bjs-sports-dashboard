@@ -1,6 +1,7 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { EspnService } from '../../core/services/espn.service';
 import { DashboardConfigService } from '../../core/services/dashboard-config.service';
+import { TimeZoneService } from '../../core/services/time-zone.service';
 import {
   GOLF_OPTIONS, MAX_TEAMS, SERIES_OPTIONS, TEAM_LEAGUES, leagueLabel,
 } from '../../core/config/leagues.config';
@@ -16,6 +17,7 @@ import { GolfSeriesConfig, League, SeriesConfig, SportLeague, TeamConfig } from 
 export class SettingsComponent {
   private espn = inject(EspnService);
   private store = inject(DashboardConfigService);
+  readonly tz = inject(TimeZoneService);
 
   readonly maxTeams = MAX_TEAMS;
   readonly maxNameLength = MAX_NAME_LENGTH;
@@ -28,6 +30,10 @@ export class SettingsComponent {
   readonly isEmpty = this.store.isEmpty;
   readonly name = this.store.name;
   readonly title = this.store.title;
+
+  setTimeZone(event: Event) {
+    this.tz.setOverride((event.target as HTMLSelectElement).value);
+  }
 
   setName(event: Event) {
     this.store.setName((event.target as HTMLInputElement).value);

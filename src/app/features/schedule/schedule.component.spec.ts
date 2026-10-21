@@ -12,6 +12,7 @@ import { provideRouter } from '@angular/router';
 import { ScheduleComponent } from './schedule.component';
 import { EspnService } from '../../core/services/espn.service';
 import { createMockEspnService } from '../../testing/mock-espn.service';
+import { TimeZoneService } from '../../core/services/time-zone.service';
 import { makeGame, makeRace } from '../../testing/test-fixtures';
 import { SAMPLE_CONFIG } from '../../testing/sample-config';
 import { provideDashboardConfig, makeConfig, makeTeamConfig } from '../../testing/dashboard-config';
@@ -249,6 +250,22 @@ describe('ScheduleComponent', () => {
       fixture.detectChanges();
       await settle();
     }
+
+    it('groups and times games in the display zone', async () => {
+      // 04:30 UTC June 23 = 9:30 PM PT June 22 = 12:30 AM ET June 23
+      const late = makeGame({ date: new Date('2026-06-23T04:30:00Z') });
+      mockEspn.getGamesInDateRange.mockReturnValue([late]);
+      localStorage.setItem('sports-dashboard:timezone', 'America/Los_Angeles');
+      await createWith(makeConfig({ teams: [makeTeamConfig()] }));
+      expect(component.scheduleDays()[0].dateKey).toBe('20260622');
+      expect(fixture.nativeElement.querySelector('.game-time')?.textContent?.trim()).toBe('9:30 PM PT');
+
+      TestBed.inject(TimeZoneService).setOverride('America/New_York');
+      fixture.detectChanges();
+      expect(component.scheduleDays()[0].dateKey).toBe('20260623');
+      expect(fixture.nativeElement.querySelector('.game-time')?.textContent?.trim()).toBe('12:30 AM ET');
+      localStorage.clear();
+    });
 
     it('labels games with the league name, not the raw ESPN slug', async () => {
       mockEspn.getGamesInDateRange.mockReturnValue([makeGame({ date: new Date('2026-06-20T18:05:00Z') })]);

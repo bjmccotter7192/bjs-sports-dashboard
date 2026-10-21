@@ -79,7 +79,7 @@
       }
 
       @if (isPre()) {
-        <div class="game-date">{{ game()?.date | date: 'MMM d · h:mm a' : 'America/Chicago' }} CT</div>
+        <div class="game-date">{{ game()?.date | zonedTime: zone() }}</div>
       }
       @if (isPost()) {
         <div class="game-date">{{ game()?.date | date: 'MMMM d, y' }}</div>

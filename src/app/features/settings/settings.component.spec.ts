@@ -10,6 +10,7 @@ import { MAX_TEAMS } from '../../core/config/leagues.config';
 import { createMockEspnService } from '../../testing/mock-espn.service';
 import { makeConfig, makeTeamConfig } from '../../testing/dashboard-config';
 import { TeamOption } from '../../core/models/team-config.model';
+import { TimeZoneService } from '../../core/services/time-zone.service';
 
 function option(overrides: Parameters<typeof makeTeamConfig>[0] = {}): TeamOption {
   return { config: makeTeamConfig(overrides), logo: '' };
@@ -61,6 +62,26 @@ describe('SettingsComponent', () => {
     fixture.detectChanges();
     expect(store.name()).toBe('Alex');
     expect(el().textContent).toContain('Shown as "Alex Sports Dashboard"');
+  });
+
+  // ── Time zone ───────────────────────────────────────────────────────────────
+
+  it('defaults to Automatic and sets an override from the select', async () => {
+    await create();
+    const tz = TestBed.inject(TimeZoneService);
+    const select = el().querySelector<HTMLSelectElement>('.tz-select')!;
+    expect(select.value).toBe('');
+    expect(select.options[0].textContent).toContain(tz.browserZone);
+
+    select.value = 'America/Chicago';
+    select.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(tz.zone()).toBe('America/Chicago');
+    expect(el().textContent).toContain('Game and race times are shown in CT');
+
+    select.value = '';
+    select.dispatchEvent(new Event('change'));
+    expect(tz.override()).toBe('');
   });
 
   // ── Team picker ─────────────────────────────────────────────────────────────
