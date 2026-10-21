@@ -1,0 +1,109 @@
+.game-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+
+  &.clickable {
+    cursor: pointer;
+
+    &:hover {
+      background: var(--bg-card-hover);
+    }
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &.starred {
+    border-color: #c9a84c;
+  }
+
+  &.live {
+    box-shadow: inset 3px 0 0 #ef4444;
+  }
+}
+
+.team-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+
+  .logo {
+    width: 1.6rem;
+    height: 1.6rem;
+    object-fit: contain;
+    flex-shrink: 0;
+
+    &.placeholder {
+      border-radius: 50%;
+      background: var(--border);
+    }
+  }
+
+  .abbr {
+    font-weight: 700;
+    width: 3rem;
+  }
+
+  .name {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .score {
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &.winner .score {
+    color: #fff;
+  }
+
+  &.loser {
+    opacity: 0.6;
+  }
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+
+  .star {
+    color: #c9a84c;
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ef4444;
+  }
+
+  .live-text {
+    color: #ef4444;
+    font-weight: 700;
+  }
+
+  .broadcast {
+    margin-left: auto;
+  }
+}

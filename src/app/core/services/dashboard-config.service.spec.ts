@@ -153,4 +153,13 @@ describe('DashboardConfigService', () => {
     service.clear();
     expect(service.name()).toBe('Alex');
   });
+
+  it('followedTeamLeagues lists leagues with a configured team, in registry order', () => {
+    const service = create();
+    expect(service.followedTeamLeagues()).toEqual([]);
+    service.addTeam(makeTeamConfig({ espnId: '13', sport: 'hockey/nhl' }));
+    service.addTeam(makeTeamConfig({ espnId: '18', sport: 'basketball/nba' }));
+    service.addTeam(makeTeamConfig({ espnId: '19', sport: 'basketball/nba' }));
+    expect(service.followedTeamLeagues().map(l => l.label)).toEqual(['NBA', 'NHL']);
+  });
 });

@@ -54,6 +54,8 @@ ng build                                          # production build → dist/
 | `src/app/features/yesterday/` | Last Played — most recent completed game per team in last 14 days. Same dynamic ordering. |
 | `src/app/features/schedule/` | Next 30 days, grouped by date |
 | `src/app/features/news/` | News feed, one source per configured league with `hasNews` (NASCAR has none). Filterable by league. |
+| `src/app/features/league/` | `#/league/:code?date=YYYYMMDD`: every game in one team league for one ESPN game day. Smart default day, ‹ › day paging, user's teams starred and listed first, box score on click, 30s live refresh. |
+| `src/app/shared/components/game-card/` | Compact two-row scoreboard card used by league pages. Inputs: `game`, `sport`, `zone`, `starred`. |
 | `src/app/features/settings/` | Team picker (from ESPN `/teams`), reorder/remove, series + golf toggles, share link, reset. Changes save immediately. |
 | `src/app/features/import/` | Applies a share link: decodes ids, resolves names from ESPN, previews, replaces config on confirm. |
 | `src/app/shared/components/empty-config/` | "Pick your teams" prompt shown by every view when the config is empty. |
@@ -75,6 +77,13 @@ racing/f1          racing/nascar-premier             racing/irl
 golf/pga
 ```
 `nascar-sprint-cup`, `nascar-cup`, `indycar` are all **wrong** and return 400.
+
+### League pages — ESPN game day, smart default, live refresh
+- ESPN files scoreboard games by **US Eastern calendar day**. A 9:50 PM ET tip is `01:50Z` the next day but is still listed under the ET date. League pages page by `ESPN_DAY_ZONE` (`America/New_York`) day keys, while card times use the viewer's zone.
+- URL codes are `leagueRouteKey(slug)` (lowercased label: `nba`, `epl`, `ncaam`). Only team leagues have pages. Racing and golf return "League not found" for now.
+- With no `?date=`, the page opens today but switches to yesterday (`replaceUrl`) if today has no games, or if nothing has started and the first game is more than 2h away. An explicit `?date=` is never overridden.
+- While any game on the page has `state === 'in'`, `board.reload()` runs every `LIVE_REFRESH_MS` (30s). It pauses while `document.hidden` and reloads immediately when the tab becomes visible again. Skeletons show only on first load (`!hasValue()`), so refreshes don't flash.
+- The navbar **Leagues ▾** dropdown lists `followedTeamLeagues` only and is hidden when the user follows no teams.
 
 ### Per-league quirks (handled by `LEAGUES` fields)
 - **College basketball** scoreboard returns only Top-25 games by default (15 vs 92 on a sample date). `scoreboardParams: { groups: '50', limit: '400' }` gets all D-I games. College football's default scoreboard is FBS-level, so FCS teams can be missing from Today; Last Played and Schedule use team schedules and are unaffected.

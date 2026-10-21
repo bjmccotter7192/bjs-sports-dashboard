@@ -66,6 +66,64 @@
     }
   }
 
+  .leagues-dropdown {
+    position: relative;
+
+    .dropdown-toggle {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        color: var(--text-primary);
+        background: var(--bg-card);
+      }
+
+      &.active {
+        color: #fff;
+        background: #1d4ed8;
+      }
+
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+
+      .caret {
+        transition: transform 0.2s;
+
+        &.open {
+          transform: rotate(180deg);
+        }
+      }
+    }
+
+    .dropdown-menu {
+      position: absolute;
+      top: calc(100% + 0.4rem);
+      right: 0;
+      min-width: 9rem;
+      padding: 0.35rem;
+      display: flex;
+      flex-direction: column;
+      background: #0d1224;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      z-index: 120;
+
+      a {
+        padding: 0.5rem 0.75rem;
+      }
+    }
+  }
+
   .hamburger {
     display: none;
     flex-direction: column;
@@ -130,6 +188,11 @@
       gap: 0.6rem;
     }
 
+    &.mobile-sub-link {
+      padding-left: 2rem;
+      font-size: 0.95rem;
+    }
+
     &:hover,
     &:active {
       color: var(--text-primary);
@@ -140,6 +203,15 @@
       color: #fff;
       background: #1d4ed8;
     }
+  }
+
+  .mobile-section-label {
+    padding: 0.75rem 1rem 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
   }
 }
 

@@ -10,6 +10,28 @@
       <a routerLink="/today" routerLinkActive="active">Today</a>
       <a routerLink="/schedule" routerLinkActive="active">Schedule</a>
       <a routerLink="/news" routerLinkActive="active">News</a>
+      @if (leagueLinks().length) {
+        <div class="leagues-dropdown">
+          <button
+            type="button"
+            class="dropdown-toggle"
+            [class.active]="onLeaguePage()"
+            [attr.aria-expanded]="leaguesOpen()"
+            aria-haspopup="true"
+            (click)="toggleLeagues()"
+          >
+            Leagues
+            <svg class="caret" [class.open]="leaguesOpen()" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          @if (leaguesOpen()) {
+            <div class="dropdown-menu">
+              @for (link of leagueLinks(); track link.path) {
+                <a [routerLink]="link.path" routerLinkActive="active" (click)="closeLeagues()">{{ link.label }}</a>
+              }
+            </div>
+          }
+        </div>
+      }
       <a class="settings-link" routerLink="/settings" routerLinkActive="active" aria-label="Settings" title="Settings">
         <svg class="gear-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </a>
@@ -30,6 +52,12 @@
     <a routerLink="/today" routerLinkActive="active" (click)="closeMenu()">Today</a>
     <a routerLink="/schedule" routerLinkActive="active" (click)="closeMenu()">Schedule</a>
     <a routerLink="/news" routerLinkActive="active" (click)="closeMenu()">News</a>
+    @if (leagueLinks().length) {
+      <div class="mobile-section-label">Leagues</div>
+      @for (link of leagueLinks(); track link.path) {
+        <a class="mobile-sub-link" [routerLink]="link.path" routerLinkActive="active" (click)="closeMenu()">{{ link.label }}</a>
+      }
+    }
     <a class="settings-link" routerLink="/settings" routerLinkActive="active" (click)="closeMenu()">
       <svg class="gear-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       Settings

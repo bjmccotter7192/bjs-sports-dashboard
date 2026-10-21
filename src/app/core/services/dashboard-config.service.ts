@@ -1,6 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { DashboardConfig, GolfLeague, MotorsportLeague, TeamConfig } from '../models/team-config.model';
-import { MAX_TEAMS } from '../config/leagues.config';
+import { MAX_TEAMS, TEAM_LEAGUES } from '../config/leagues.config';
 import {
   EMPTY_CONFIG, dashboardTitle, isEmptyConfig, parseStoredConfig, sanitizeConfig, sanitizeName,
   serializeConfig, teamKey,
@@ -18,6 +18,11 @@ export class DashboardConfigService {
   readonly config = this.state.asReadonly();
   readonly isEmpty = computed(() => isEmptyConfig(this.state()));
   readonly isFull = computed(() => this.state().teams.length >= MAX_TEAMS);
+
+  /** Team leagues with at least one configured team, in registry order. */
+  readonly followedTeamLeagues = computed(() =>
+    TEAM_LEAGUES.filter(l => this.state().teams.some(t => t.sport === l.slug))
+  );
 
   private nameState = signal(this.loadName());
   readonly name = this.nameState.asReadonly();

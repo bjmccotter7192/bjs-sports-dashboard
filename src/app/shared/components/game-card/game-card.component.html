@@ -1,0 +1,41 @@
+<button
+  type="button"
+  class="game-card"
+  [class.starred]="starred()"
+  [class.live]="isLive()"
+  [class.clickable]="isClickable()"
+  [disabled]="!isClickable()"
+  (click)="onClick()"
+  [attr.aria-label]="game().awayTeam.displayName + ' at ' + game().homeTeam.displayName"
+>
+  @for (team of rows(); track team.id) {
+    <div class="team-row" [class.winner]="team.isWinner" [class.loser]="isLoser(team)">
+      @if (team.logo) {
+        <img class="logo" [src]="team.logo" alt="" loading="lazy" />
+      } @else {
+        <span class="logo placeholder"></span>
+      }
+      <span class="abbr">{{ team.abbreviation }}</span>
+      <span class="name">{{ team.displayName }}</span>
+      @if (!isPre()) {
+        <span class="score">{{ team.score }}</span>
+      }
+    </div>
+  }
+  <div class="status">
+    @if (starred()) {
+      <span class="star" aria-label="Your team">★</span>
+    }
+    @if (isLive()) {
+      <span class="live-dot"></span>
+      <span class="live-text">{{ liveStatus() }}</span>
+    } @else if (isPre()) {
+      <span>{{ game().date | zonedTime: zone() : 'time' }}</span>
+    } @else {
+      <span>{{ game().status.detail }}</span>
+    }
+    @if (game().broadcast && !isPost()) {
+      <span class="broadcast">{{ game().broadcast }}</span>
+    }
+  </div>
+</button>
