@@ -6,14 +6,33 @@ export interface LeagueInfo {
   label: string;
   /** ESPN's CORS-accessible news endpoint returns articles for this league */
   hasNews: boolean;
+  /**
+   * Team sports with a live game clock: suffix shown after the period number
+   * (e.g. '2Q 4:22'). Omitted → show ESPN's status text instead (MLB innings, soccer minutes).
+   */
+  periodLabel?: string;
+  /** Extra scoreboard query params. College hoops defaults to Top-25 games only without these. */
+  scoreboardParams?: Record<string, string>;
+  /** Team schedule returns only results by default; upcoming games need `?fixture=true` (soccer). */
+  splitSchedule?: boolean;
 }
 
-/** Every league the app can display. Order here is the News filter order. */
+/** Every league the app can display. Order here is the News filter and Settings tab order. */
 export const LEAGUES: readonly LeagueInfo[] = [
-  { slug: 'basketball/nba',        kind: 'team',   label: 'NBA',     hasNews: true },
-  { slug: 'football/nfl',          kind: 'team',   label: 'NFL',     hasNews: true },
+  { slug: 'basketball/nba',        kind: 'team',   label: 'NBA',     hasNews: true, periodLabel: 'Q' },
+  { slug: 'basketball/wnba',       kind: 'team',   label: 'WNBA',    hasNews: true, periodLabel: 'Q' },
+  { slug: 'football/nfl',          kind: 'team',   label: 'NFL',     hasNews: true, periodLabel: 'Q' },
   { slug: 'baseball/mlb',          kind: 'team',   label: 'MLB',     hasNews: true },
-  { slug: 'hockey/nhl',            kind: 'team',   label: 'NHL',     hasNews: true },
+  { slug: 'hockey/nhl',            kind: 'team',   label: 'NHL',     hasNews: true, periodLabel: 'P' },
+  { slug: 'soccer/usa.1',          kind: 'team',   label: 'MLS',     hasNews: true, splitSchedule: true },
+  { slug: 'soccer/eng.1',          kind: 'team',   label: 'EPL',     hasNews: true, splitSchedule: true },
+  { slug: 'soccer/usa.nwsl',       kind: 'team',   label: 'NWSL',    hasNews: true, splitSchedule: true },
+  { slug: 'football/college-football', kind: 'team', label: 'CFB',   hasNews: true, periodLabel: 'Q',
+    scoreboardParams: { limit: '300' } },
+  { slug: 'basketball/mens-college-basketball', kind: 'team', label: 'NCAAM', hasNews: true, periodLabel: 'H',
+    scoreboardParams: { groups: '50', limit: '400' } },
+  { slug: 'basketball/womens-college-basketball', kind: 'team', label: 'NCAAW', hasNews: true, periodLabel: 'Q',
+    scoreboardParams: { groups: '50', limit: '400' } },
   { slug: 'racing/f1',             kind: 'series', label: 'F1',      hasNews: true },
   // news endpoint responds 200 with articles: [] — see CLAUDE.md
   { slug: 'racing/nascar-premier', kind: 'series', label: 'NASCAR',  hasNews: false },
@@ -21,8 +40,12 @@ export const LEAGUES: readonly LeagueInfo[] = [
   { slug: 'golf/pga',              kind: 'golf',   label: 'PGA',     hasNews: true },
 ];
 
+export function leagueInfo(slug: League): LeagueInfo | undefined {
+  return LEAGUES.find(l => l.slug === slug);
+}
+
 export function leagueLabel(slug: League): string {
-  return LEAGUES.find(l => l.slug === slug)?.label ?? slug;
+  return leagueInfo(slug)?.label ?? slug;
 }
 
 export const TEAM_LEAGUES = LEAGUES.filter(l => l.kind === 'team');

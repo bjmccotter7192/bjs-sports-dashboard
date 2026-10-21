@@ -1,8 +1,15 @@
 export type SportLeague =
   | 'basketball/nba'
+  | 'basketball/wnba'
   | 'football/nfl'
   | 'baseball/mlb'
-  | 'hockey/nhl';
+  | 'hockey/nhl'
+  | 'soccer/usa.1'
+  | 'soccer/eng.1'
+  | 'soccer/usa.nwsl'
+  | 'football/college-football'
+  | 'basketball/mens-college-basketball'
+  | 'basketball/womens-college-basketball';
 
 export type MotorsportLeague =
   | 'racing/f1'

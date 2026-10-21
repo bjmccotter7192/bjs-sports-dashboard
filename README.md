@@ -6,7 +6,7 @@ A personal sports dashboard built with Angular v21. Tracks your teams and motors
 
 ## Picking Teams
 
-Open **Settings** to choose up to 12 teams across the NBA, NFL, MLB and NHL, plus any of Formula 1, NASCAR Cup, IndyCar and the PGA Tour. Picks are saved in your browser. **Copy share link** produces a URL that loads the same dashboard in another browser or device.
+Open **Settings** to choose up to 12 teams across the NBA, WNBA, NFL, MLB, NHL, MLS, Premier League, NWSL, college football, and men's and women's college basketball, plus any of Formula 1, NASCAR Cup, IndyCar and the PGA Tour. Picks are saved in your browser. **Copy share link** produces a URL that loads the same dashboard in another browser or device.
 
 ---
 
