@@ -6,7 +6,7 @@ import { YesterdayComponent } from './yesterday.component';
 import { EspnService } from '../../core/services/espn.service';
 import { createMockEspnService } from '../../testing/mock-espn.service';
 import { makeGame, makeRace } from '../../testing/test-fixtures';
-import { DEFAULT_CONFIG } from '../../core/config/teams.config';
+import { SAMPLE_CONFIG } from '../../testing/sample-config';
 import { provideDashboardConfig, makeConfig, makeTeamConfig } from '../../testing/dashboard-config';
 
 describe('YesterdayComponent', () => {
@@ -28,6 +28,7 @@ describe('YesterdayComponent', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: EspnService, useValue: mockEspn },
+        provideDashboardConfig(),
       ],
     }).compileComponents();
 
@@ -60,7 +61,7 @@ describe('YesterdayComponent', () => {
     await settle();
 
     const panels = fixture.nativeElement.querySelectorAll('app-team-panel');
-    expect(panels.length).toBe(DEFAULT_CONFIG.teams.length);
+    expect(panels.length).toBe(SAMPLE_CONFIG.teams.length);
   });
 
   it('renders one app-golf-panel for PGA Tour after resources settle', async () => {
@@ -68,7 +69,7 @@ describe('YesterdayComponent', () => {
     await settle();
 
     const panels = fixture.nativeElement.querySelectorAll('app-golf-panel');
-    expect(panels.length).toBe(DEFAULT_CONFIG.golf.length);
+    expect(panels.length).toBe(SAMPLE_CONFIG.golf.length);
   });
 
   it('renders one app-motorsport-panel per series after resources settle', async () => {
@@ -76,7 +77,7 @@ describe('YesterdayComponent', () => {
     await settle();
 
     const panels = fixture.nativeElement.querySelectorAll('app-motorsport-panel');
-    expect(panels.length).toBe(DEFAULT_CONFIG.series.length);
+    expect(panels.length).toBe(SAMPLE_CONFIG.series.length);
   });
 
   it('renders the .teams-grid container', async () => {
@@ -92,7 +93,7 @@ describe('YesterdayComponent', () => {
     fixture.detectChanges();
     await settle();
 
-    expect(component.teamData().length).toBe(DEFAULT_CONFIG.teams.length);
+    expect(component.teamData().length).toBe(SAMPLE_CONFIG.teams.length);
   });
 
   it('teamData() entries have null game when findLastPlayedGame returns null', async () => {
@@ -125,11 +126,11 @@ describe('YesterdayComponent', () => {
     fixture.detectChanges();
     await settle();
 
-    for (const team of DEFAULT_CONFIG.teams) {
+    for (const team of SAMPLE_CONFIG.teams) {
       expect(mockEspn.getTeamSchedule).toHaveBeenCalledWith(team.sport, team.espnId);
     }
     const scoreboardSports = mockEspn.getScoreboard.mock.calls.map(([sport]) => sport);
-    for (const team of DEFAULT_CONFIG.teams) {
+    for (const team of SAMPLE_CONFIG.teams) {
       expect(scoreboardSports).not.toContain(team.sport);
     }
   });
@@ -164,7 +165,7 @@ describe('YesterdayComponent', () => {
     fixture.detectChanges();
     await settle();
 
-    expect(component.seriesData().length).toBe(DEFAULT_CONFIG.series.length);
+    expect(component.seriesData().length).toBe(SAMPLE_CONFIG.series.length);
   });
 
   it('seriesData() entries have null race when findLastRace returns null', async () => {
@@ -215,6 +216,12 @@ describe('YesterdayComponent', () => {
     expect(component.golfData()[0].isLoading).toBe(false);
   });
 
+  it('does not show the setup prompt when teams are configured', async () => {
+    fixture.detectChanges();
+    await settle();
+    expect(fixture.nativeElement.querySelector('app-empty-config')).toBeNull();
+  });
+
   // ── Custom config ───────────────────────────────────────────────────────────
 
   describe('with a custom config', () => {
@@ -249,9 +256,10 @@ describe('YesterdayComponent', () => {
       expect(mockEspn.findLastPlayedGame.mock.calls[0][1]).toBe('19');
     });
 
-    it('renders no panels and fetches nothing for an empty config', async () => {
+    it('renders the setup prompt, no panels, and fetches nothing for an empty config', async () => {
       await createWith(makeConfig());
       expect(fixture.nativeElement.querySelectorAll('app-team-panel, app-motorsport-panel, app-golf-panel').length).toBe(0);
+      expect(fixture.nativeElement.querySelector('app-empty-config')).not.toBeNull();
       expect(mockEspn.getTeamSchedule).not.toHaveBeenCalled();
       expect(mockEspn.getScoreboard).not.toHaveBeenCalled();
     });

@@ -5,7 +5,9 @@
   </div>
 </div>
 
-@if (isLoading()) {
+@if (isEmpty()) {
+  <app-empty-config />
+} @else if (isLoading()) {
   <div class="loading-state">
     @for (i of [1, 2, 3]; track i) {
       <div class="skeleton-day">

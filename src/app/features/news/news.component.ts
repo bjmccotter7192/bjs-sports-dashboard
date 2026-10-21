@@ -3,6 +3,8 @@ import { EspnService } from '../../core/services/espn.service';
 import { DashboardConfigService } from '../../core/services/dashboard-config.service';
 import { LEAGUES } from '../../core/config/leagues.config';
 import { fetchAll } from '../../core/utils/fetch-all';
+import { EmptyConfigComponent } from '../../shared/components/empty-config/empty-config.component';
+import { isEmptyConfig } from '../../core/config/config-validation';
 import { League } from '../../core/models/team-config.model';
 import { NewsArticle } from '../../core/models/game.model';
 
@@ -15,13 +17,14 @@ interface NewsSource {
 
 @Component({
   selector: 'app-news',
-  imports: [],
+  imports: [EmptyConfigComponent],
   templateUrl: './news.component.html',
   styleUrl: './news.component.scss',
 })
 export class NewsComponent {
   private espn = inject(EspnService);
   private config = inject(DashboardConfigService).config;
+  readonly isEmpty = computed(() => isEmptyConfig(this.config()));
 
   selectedFilter = signal<string>('all');
 

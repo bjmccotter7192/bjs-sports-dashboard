@@ -1,0 +1,149 @@
+<div class="view-header">
+  <div class="header-text">
+    <h1 class="view-title">Settings</h1>
+    <span class="view-date">Pick what shows on your dashboard · saved in this browser</span>
+  </div>
+</div>
+
+<section class="settings-section">
+  <div class="section-header">
+    <h2>Dashboard name</h2>
+  </div>
+  <input
+    class="search name-input"
+    type="text"
+    placeholder="e.g. BJ's"
+    [maxLength]="maxNameLength"
+    [value]="name()"
+    (input)="setName($event)"
+    aria-label="Dashboard name"
+  />
+  <p class="hint">Shown as "{{ title() }}". Saved in this browser; not included in share links.</p>
+</section>
+
+<section class="settings-section">
+  <div class="section-header">
+    <h2>Your teams</h2>
+    <span class="count" [class.full]="isFull()">{{ teams().length }} / {{ maxTeams }}</span>
+  </div>
+
+  @if (!teams().length) {
+    <p class="hint">No teams yet. Add some below.</p>
+  } @else {
+    <ul class="team-list">
+      @for (team of teams(); track team.sport + team.espnId; let i = $index, first = $first, last = $last) {
+        <li class="team-row" [style.--primary]="team.primaryColor">
+          <span class="swatch"></span>
+          <span class="team-name">{{ team.name }}</span>
+          <span class="league-tag">{{ label(team.sport) }}</span>
+          <div class="row-actions">
+            <button class="icon-btn" (click)="move(i, -1)" [disabled]="first" [attr.aria-label]="'Move ' + team.shortName + ' up'">↑</button>
+            <button class="icon-btn" (click)="move(i, 1)" [disabled]="last" [attr.aria-label]="'Move ' + team.shortName + ' down'">↓</button>
+            <button class="icon-btn remove" (click)="remove(team)" [attr.aria-label]="'Remove ' + team.shortName">✕</button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>
+
+<section class="settings-section">
+  <div class="section-header">
+    <h2>Add a team</h2>
+  </div>
+
+  <div class="league-tabs" role="tablist">
+    @for (l of teamLeagues; track l.slug) {
+      <button
+        class="tab-btn"
+        role="tab"
+        [class.active]="league() === l.slug"
+        [attr.aria-selected]="league() === l.slug"
+        (click)="selectLeague(l.slug)"
+      >{{ l.label }}</button>
+    }
+  </div>
+
+  <input
+    class="search"
+    type="search"
+    [placeholder]="'Search ' + label(league()) + ' teams'"
+    [value]="query()"
+    (input)="query.set($any($event.target).value)"
+    aria-label="Search teams"
+  />
+
+  @if (isFull()) {
+    <p class="hint">You've reached {{ maxTeams }} teams. Remove one to add another.</p>
+  }
+
+  @if (options.isLoading()) {
+    <p class="hint">Loading teams…</p>
+  } @else if (options.error()) {
+    <p class="hint error">Couldn't load teams from ESPN. Try again later.</p>
+  } @else {
+    <ul class="option-list">
+      @for (opt of filteredOptions(); track opt.config.espnId) {
+        <li>
+          <button
+            class="option"
+            (click)="add(opt.config)"
+            [disabled]="isSelected(opt.config) || isFull() || !!adding()"
+          >
+            @if (opt.logo) {
+              <img [src]="opt.logo" alt="" loading="lazy" class="option-logo" />
+            }
+            <span class="option-name">{{ opt.config.name }}</span>
+            @if (isAdding(opt.config)) {
+              <span class="added">Adding…</span>
+            } @else if (isSelected(opt.config)) {
+              <span class="added">Added</span>
+            }
+          </button>
+        </li>
+      } @empty {
+        <li class="hint">No teams match "{{ query() }}".</li>
+      }
+    </ul>
+  }
+</section>
+
+<section class="settings-section">
+  <div class="section-header">
+    <h2>Racing &amp; golf</h2>
+  </div>
+  <div class="toggle-list">
+    @for (opt of seriesOptions; track opt.sport) {
+      <label class="toggle" [style.--primary]="opt.primaryColor">
+        <input type="checkbox" [checked]="isSeriesOn(opt)" (change)="toggleSeries(opt, $event)" />
+        <span>{{ opt.name }}</span>
+      </label>
+    }
+    @for (opt of golfOptions; track opt.sport) {
+      <label class="toggle" [style.--primary]="opt.primaryColor">
+        <input type="checkbox" [checked]="isGolfOn(opt)" (change)="toggleGolf(opt, $event)" />
+        <span>{{ opt.name }}</span>
+      </label>
+    }
+  </div>
+</section>
+
+<section class="settings-section">
+  <div class="section-header">
+    <h2>Share</h2>
+  </div>
+  <p class="hint">Copy a link that loads this dashboard in another browser or device.</p>
+  <div class="share-row">
+    <button class="action-btn" (click)="share()" [disabled]="isEmpty()">Copy share link</button>
+    @if (copied()) {
+      <span class="status">Copied!</span>
+    }
+  </div>
+  @if (shareUrl()) {
+    <input class="share-url" type="text" readonly [value]="shareUrl()" aria-label="Share link" (focus)="$any($event.target).select()" />
+  }
+</section>
+
+<section class="settings-section">
+  <button class="action-btn danger" (click)="clearAll()" [disabled]="isEmpty()">Remove everything</button>
+</section>

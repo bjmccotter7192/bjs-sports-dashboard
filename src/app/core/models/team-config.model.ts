@@ -48,3 +48,11 @@ export interface DashboardConfig {
   series: SeriesConfig[];
   golf: GolfSeriesConfig[];
 }
+
+export type TeamColors = Pick<TeamConfig, 'primaryColor' | 'secondaryColor'>;
+
+/** A team a user can pick in Settings, built from ESPN's /groups endpoint. */
+export interface TeamOption {
+  config: TeamConfig;
+  logo: string;
+}

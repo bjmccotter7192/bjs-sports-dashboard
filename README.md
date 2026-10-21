@@ -4,19 +4,9 @@ A personal sports dashboard built with Angular v21. Tracks your teams and motors
 
 ---
 
-## Teams & Series
+## Picking Teams
 
-| Type | Entry |
-|------|-------|
-| NBA | New York Knicks |
-| NFL | New York Giants |
-| MLB | New York Yankees |
-| MLB | Washington Nationals |
-| NHL | New York Rangers |
-| Motorsport | Formula 1 |
-| Motorsport | NASCAR Cup Series |
-| Motorsport | IndyCar Series |
-| Golf | PGA Tour |
+Open **Settings** to choose up to 12 teams across the NBA, NFL, MLB and NHL, plus any of Formula 1, NASCAR Cup, IndyCar and the PGA Tour. Picks are saved in your browser. **Copy share link** produces a URL that loads the same dashboard in another browser or device.
 
 ---
 
@@ -27,7 +17,9 @@ A personal sports dashboard built with Angular v21. Tracks your teams and motors
 | `/today` | Today's games, next upcoming race, and current/next PGA tournament. Active panels float to top; off-season teams sink to bottom. |
 | `/last-played` | Most recent completed game per team (14-day window); last race and tournament per series. Same dynamic ordering. |
 | `/schedule` | All upcoming events for your teams and series over the next 30 days, grouped by date |
-| `/news` | Latest headlines from 7 leagues (NBA, NFL, MLB, NHL, F1, IndyCar, PGA). Filterable by league. |
+| `/news` | Latest headlines from the leagues you follow (NASCAR has no news feed). Filterable by league. |
+| `/settings` | Pick, reorder and remove teams; toggle series; copy a share link |
+| `/import?c=…` | Preview and apply a shared dashboard |
 
 ---
 
@@ -138,8 +130,8 @@ src/
 │   │
 │   ├── core/
 │   │   ├── config/
-│   │   │   ├── leagues.config.ts  # LEAGUES registry (slug, kind, label, hasNews)
-│   │   │   └── teams.config.ts    # DEFAULT_CONFIG — teams, series, golf
+│   │   │   ├── config-validation.ts  # Sanitizing, storage format, share codes
+│   │   │   └── leagues.config.ts  # LEAGUES registry, series/golf catalog, MAX_TEAMS
 │   │   ├── models/
 │   │   │   ├── game.model.ts      # EspnEvent, Game, Race, Tournament interfaces
 │   │   │   └── team-config.model.ts  # TeamConfig, SeriesConfig, GolfSeriesConfig types
@@ -245,14 +237,9 @@ providers: [provideZonelessChangeDetection(), ...]
 
 ---
 
-## Adding a New Team or Series
+## Adding a New Series
 
-1. Open [src/app/core/config/teams.config.ts](src/app/core/config/teams.config.ts)
-2. Add an entry to `DEFAULT_CONFIG.teams`, `.series` (motorsport), or `.golf`. Array order is display order.
-3. For a team, find its `espnId`, `abbreviation`, and colors from the league's teams endpoint:
-   ```bash
-   curl -s --compressed "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/teams" | python3 -m json.tool | grep -B3 -A6 '"shortDisplayName": "Yankees"'
-   ```
+Teams are picked in the app. To offer a new motorsport series or golf tour, add it to `SERIES_OPTIONS` or `GOLF_OPTIONS` in [src/app/core/config/leagues.config.ts](src/app/core/config/leagues.config.ts). A new league also needs an entry in `LEAGUES` and its slug in `team-config.model.ts`; see CLAUDE.md for ESPN quirks to check first.
 
 ---
 

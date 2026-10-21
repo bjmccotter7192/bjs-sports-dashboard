@@ -1,5 +1,7 @@
-import { Component, HostListener, signal } from '@angular/core';
+import { Component, HostListener, effect, inject, signal } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { DashboardConfigService } from './core/services/dashboard-config.service';
 
 @Component({
   selector: 'app-root',
@@ -9,6 +11,12 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 })
 export class App {
   menuOpen = signal(false);
+  readonly title = inject(DashboardConfigService).title;
+
+  constructor() {
+    const pageTitle = inject(Title);
+    effect(() => pageTitle.setTitle(this.title()));
+  }
 
   toggleMenu() {
     this.menuOpen.update(v => !v);

@@ -1,7 +1,11 @@
-import { DashboardConfig } from '../models/team-config.model';
+/**
+ * A realistic multi-league config for component tests (BJ's original dashboard).
+ * App code starts from an empty config; this exists only for specs.
+ */
+import { DashboardConfig } from '../core/models/team-config.model';
+import { GOLF_OPTIONS, SERIES_OPTIONS } from '../core/config/leagues.config';
 
-/** BJ's dashboard. Array order is display order. */
-export const DEFAULT_CONFIG: DashboardConfig = {
+export const SAMPLE_CONFIG: DashboardConfig = {
   teams: [
     {
       kind: 'team',
@@ -54,40 +58,6 @@ export const DEFAULT_CONFIG: DashboardConfig = {
       secondaryColor: '#CE1126',
     },
   ],
-  series: [
-    {
-      kind: 'series',
-      name: 'Formula 1',
-      shortName: 'F1',
-      sport: 'racing/f1',
-      primaryColor: '#E10600',
-      secondaryColor: '#1f1f1f',
-    },
-    {
-      kind: 'series',
-      name: 'NASCAR Cup Series',
-      shortName: 'NASCAR',
-      sport: 'racing/nascar-premier',
-      primaryColor: '#FFC906',
-      secondaryColor: '#002D62',
-    },
-    {
-      kind: 'series',
-      name: 'IndyCar Series',
-      shortName: 'IndyCar',
-      sport: 'racing/irl',
-      primaryColor: '#004B8D',
-      secondaryColor: '#FFCC00',
-    },
-  ],
-  golf: [
-    {
-      kind: 'golf',
-      name: 'PGA Tour',
-      shortName: 'PGA',
-      sport: 'golf/pga',
-      primaryColor: '#004F2D',
-      secondaryColor: '#C9A84C',
-    },
-  ],
+  series: [...SERIES_OPTIONS],
+  golf: [...GOLF_OPTIONS],
 };

@@ -6,7 +6,7 @@ import { NewsComponent } from './news.component';
 import { EspnService } from '../../core/services/espn.service';
 import { createMockEspnService } from '../../testing/mock-espn.service';
 import { NewsArticle } from '../../core/models/game.model';
-import { DEFAULT_CONFIG } from '../../core/config/teams.config';
+import { SAMPLE_CONFIG } from '../../testing/sample-config';
 import { provideDashboardConfig, makeConfig, makeTeamConfig } from '../../testing/dashboard-config';
 
 function makeArticle(overrides: Partial<NewsArticle> = {}): NewsArticle {
@@ -45,6 +45,7 @@ describe('NewsComponent', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: EspnService, useValue: mockEspn },
+        provideDashboardConfig(),
       ],
     }).compileComponents();
 
@@ -255,9 +256,16 @@ describe('NewsComponent', () => {
     });
 
     it('skips leagues without news (NASCAR)', async () => {
-      await createWith(makeConfig({ series: [{ ...DEFAULT_CONFIG.series[1] }] }));
-      expect(DEFAULT_CONFIG.series[1].sport).toBe('racing/nascar-premier');
+      await createWith(makeConfig({ series: [{ ...SAMPLE_CONFIG.series[1] }] }));
+      expect(SAMPLE_CONFIG.series[1].sport).toBe('racing/nascar-premier');
       expect(component.filterSources().map(s => s.label)).toEqual(['All']);
+      expect(mockEspn.getNews).not.toHaveBeenCalled();
+    });
+
+    it('shows the setup prompt instead of the feed for an empty config', async () => {
+      await createWith(makeConfig());
+      expect(fixture.nativeElement.querySelector('app-empty-config')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.filter-bar')).toBeNull();
       expect(mockEspn.getNews).not.toHaveBeenCalled();
     });
   });

@@ -5,45 +5,49 @@
   </div>
 </div>
 
-<div class="teams-grid">
-  <!-- Teams with a game today (float to top) -->
-  @for (entry of activeTeamPanels(); track entry.team.sport + entry.team.espnId) {
-    <app-team-panel
-      [team]="entry.team"
-      [game]="entry.game"
-      [isLoading]="entry.isLoading"
-      (panelClick)="selectedGame.set($event)"
-    />
-  }
+@if (isEmpty()) {
+  <app-empty-config />
+} @else {
+  <div class="teams-grid">
+    <!-- Teams with a game today (float to top) -->
+    @for (entry of activeTeamPanels(); track entry.team.sport + entry.team.espnId) {
+      <app-team-panel
+        [team]="entry.team"
+        [game]="entry.game"
+        [isLoading]="entry.isLoading"
+        (panelClick)="selectedGame.set($event)"
+      />
+    }
 
-  <!-- PGA Tour + Motorsports always follow active teams -->
-  @for (entry of golfData(); track entry.series.sport) {
-    <app-golf-panel
-      [series]="entry.series"
-      [tournament]="entry.tournament"
-      [isLoading]="entry.isLoading"
-      (panelClick)="selectedTournament.set($event)"
-    />
-  }
-  @for (entry of seriesData(); track entry.series.sport) {
-    <app-motorsport-panel
-      [series]="entry.series"
-      [race]="entry.race"
-      [isLoading]="entry.isLoading"
-      (panelClick)="selectedRace.set($event)"
-    />
-  }
+    <!-- PGA Tour + Motorsports always follow active teams -->
+    @for (entry of golfData(); track entry.series.sport) {
+      <app-golf-panel
+        [series]="entry.series"
+        [tournament]="entry.tournament"
+        [isLoading]="entry.isLoading"
+        (panelClick)="selectedTournament.set($event)"
+      />
+    }
+    @for (entry of seriesData(); track entry.series.sport) {
+      <app-motorsport-panel
+        [series]="entry.series"
+        [race]="entry.race"
+        [isLoading]="entry.isLoading"
+        (panelClick)="selectedRace.set($event)"
+      />
+    }
 
-  <!-- Teams with no game today (sink to bottom) -->
-  @for (entry of inactiveTeamPanels(); track entry.team.sport + entry.team.espnId) {
-    <app-team-panel
-      [team]="entry.team"
-      [game]="entry.game"
-      [isLoading]="entry.isLoading"
-      (panelClick)="selectedGame.set($event)"
-    />
-  }
-</div>
+    <!-- Teams with no game today (sink to bottom) -->
+    @for (entry of inactiveTeamPanels(); track entry.team.sport + entry.team.espnId) {
+      <app-team-panel
+        [team]="entry.team"
+        [game]="entry.game"
+        [isLoading]="entry.isLoading"
+        (panelClick)="selectedGame.set($event)"
+      />
+    }
+  </div>
+}
 
 @if (selectedGame()) {
   <app-game-stats-modal

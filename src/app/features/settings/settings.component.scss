@@ -1,0 +1,245 @@
+.view-header {
+  margin-bottom: 1.5rem;
+
+  .view-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+  }
+
+  .view-date {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+}
+
+.settings-section {
+  max-width: 44rem;
+  margin-bottom: 2rem;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .count {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+
+    &.full {
+      color: #f5a623;
+    }
+  }
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0;
+
+  &.error {
+    color: #ff6b6b;
+  }
+}
+
+ul {
+  list-style: none;
+}
+
+// ── Selected teams ─────────────────────────────────────────────────────
+
+.team-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.team-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-sm);
+
+  .team-name {
+    flex: 1;
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .league-tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+  }
+}
+
+.row-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.4;
+  }
+}
+
+.icon-btn {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+
+  &:hover:not(:disabled) {
+    background: var(--bg-card-hover);
+  }
+
+  &.remove:hover:not(:disabled) {
+    color: #ff6b6b;
+  }
+}
+
+// ── Picker ─────────────────────────────────────────────────────────────
+
+.league-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.tab-btn {
+  padding: 0.375rem 0.875rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+
+  &.active {
+    background: var(--bg-card-hover);
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+  }
+}
+
+.search,
+.share-url {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.option-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  text-align: left;
+
+  &:hover:not(:disabled) {
+    background: var(--bg-card-hover);
+  }
+
+  .option-logo {
+    width: 1.75rem;
+    height: 1.75rem;
+    object-fit: contain;
+  }
+
+  .option-name {
+    flex: 1;
+    font-size: 0.85rem;
+  }
+
+  .added {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+  }
+}
+
+// ── Toggles, share, reset ──────────────────────────────────────────────
+
+.toggle-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  background: var(--bg-card);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.share-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+
+  .status {
+    font-size: 0.85rem;
+    color: #4caf50;
+  }
+}
+
+.action-btn {
+  padding: 0.55rem 1.1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  font-weight: 600;
+
+  &.danger:hover:not(:disabled) {
+    border-color: #ff6b6b;
+    color: #ff6b6b;
+  }
+}
