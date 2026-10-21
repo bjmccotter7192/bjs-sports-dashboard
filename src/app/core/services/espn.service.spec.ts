@@ -124,6 +124,27 @@ describe('EspnService', () => {
       const result = await promise;
       expect(result.events[0].status.type.state).toBe('pre');
     });
+
+    it('flattens score objects to their displayValue string', async () => {
+      const rawEvent = {
+        id: '1', date: '2026-10-20T23:00Z', name: 'T', shortName: 'T',
+        status: null,
+        competitions: [{
+          date: '2026-10-20T23:00Z',
+          status: { type: { state: 'post', completed: true, description: 'Final', shortDetail: 'Final' } },
+          competitors: [
+            { homeAway: 'home', score: { value: 106, displayValue: '106' }, winner: true },
+            { homeAway: 'away', score: '100', winner: false },
+          ],
+        }],
+      };
+      const promise = service.getTeamSchedule('basketball/nba', '18');
+      http.expectOne(r => r.url.includes('teams/18/schedule')).flush({ events: [rawEvent] });
+      const result = await promise;
+      const [home, away] = result.events[0].competitions[0].competitors;
+      expect(home.score).toBe('106');
+      expect(away.score).toBe('100');
+    });
   });
 
   // ── findTeamGame ─────────────────────────────────────────────────────────
@@ -173,6 +194,13 @@ describe('EspnService', () => {
     it('ignores games for other teams', () => {
       const scoreboard = { events: [makeEspnTeamEvent({ homeAbbr: 'CHW', state: 'post' })] };
       expect(service.findLastPlayedGame(scoreboard, 'NYY')).toBeNull();
+    });
+
+    it('ignores completed games before the since cutoff', () => {
+      const old = makeEspnTeamEvent({ id: 'g1', homeAbbr: 'NYY', state: 'post', date: '2026-06-01T23:00Z' });
+      const scoreboard = { events: [old] };
+      expect(service.findLastPlayedGame(scoreboard, 'NYY', new Date('2026-06-10T00:00Z'))).toBeNull();
+      expect(service.findLastPlayedGame(scoreboard, 'NYY', new Date('2026-05-30T00:00Z'))?.id).toBe('g1');
     });
   });
 

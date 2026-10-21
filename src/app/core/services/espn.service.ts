@@ -60,7 +60,8 @@ export class EspnService {
     const comp = e.competitions?.[0] ?? {};
     const competitors = (comp.competitors ?? []).map((c: any) => ({
       homeAway: c.homeAway as 'home' | 'away',
-      score: c.score,
+      // Schedule endpoint returns score as { value, displayValue }; scoreboard returns a string
+      score: typeof c.score === 'object' && c.score !== null ? c.score.displayValue : c.score,
       winner: c.winner,
       team: c.team
         ? {
@@ -120,16 +121,18 @@ export class EspnService {
     return event ? this.parseGame(event) : null;
   }
 
-  /** Find most recent *completed* game for a team in a date-range scoreboard */
+  /** Find most recent *completed* game for a team, optionally no earlier than `since` */
   findLastPlayedGame(
     scoreboard: EspnScoreboardResponse | undefined,
-    abbr: string
+    abbr: string,
+    since?: Date
   ): Game | null {
     if (!scoreboard?.events?.length) return null;
     const completed = scoreboard.events
       .filter(
         (e) =>
           e.status.type.state === 'post' &&
+          (!since || new Date(e.date) >= since) &&
           e.competitions?.[0]?.competitors?.some(
             (c) => c.team?.abbreviation === abbr
           )

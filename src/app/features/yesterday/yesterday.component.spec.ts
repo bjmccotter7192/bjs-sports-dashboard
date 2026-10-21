@@ -120,6 +120,28 @@ describe('YesterdayComponent', () => {
     expect(mockEspn.findTeamGame).not.toHaveBeenCalled();
   });
 
+  it('fetches each team via getTeamSchedule, not a date-range league scoreboard', async () => {
+    fixture.detectChanges();
+    await settle();
+
+    for (const team of MY_TEAMS) {
+      expect(mockEspn.getTeamSchedule).toHaveBeenCalledWith(team.sport, team.espnId);
+    }
+    const scoreboardSports = mockEspn.getScoreboard.mock.calls.map(([sport]) => sport);
+    for (const team of MY_TEAMS) {
+      expect(scoreboardSports).not.toContain(team.sport);
+    }
+  });
+
+  it('passes the 14-day window start to findLastPlayedGame', async () => {
+    fixture.detectChanges();
+    await settle();
+
+    const cutoff = mockEspn.findLastPlayedGame.mock.calls[0][2] as Date;
+    const daysAgo = (Date.now() - cutoff.getTime()) / 86_400_000;
+    expect(daysAgo).toBeCloseTo(14, 0);
+  });
+
   it('teamData() carries a game when findLastPlayedGame returns one', async () => {
     const game = makeGame({
       id: 'last-game-1',

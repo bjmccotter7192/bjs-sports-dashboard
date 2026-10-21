@@ -68,7 +68,13 @@ golf/pga
 `racing/nascar-premier/news` responds HTTP 200 but with `articles: []`. ESPN's CORS-accessible news endpoint simply doesn't populate NASCAR articles. The `now.core.api.espn.com` domain has NASCAR content but lacks `Access-Control-Allow-Origin`, so it can't be used in a client-side app without a proxy. NASCAR is excluded from the News view entirely.
 
 ### MLB 100-event cap
-The league scoreboard caps at 100 events. MLB plays ~15 games/day, so 100 events ≈ 7 days. The **Schedule view** uses `getTeamSchedule(sport, espnId)` (full-season per-team endpoint) and filters client-side. The **Today/Last Played views** still use the scoreboard because they only need a single day or 14-day range.
+The league scoreboard caps at 100 events. MLB plays ~15 games/day, so 100 events ≈ 7 days. The **Schedule** and **Last Played** views use `getTeamSchedule(sport, espnId)` (full-season per-team endpoint) and filter client-side. The **Today view** still uses the scoreboard because it only needs a single day.
+
+### Team-sport scoreboards reject date ranges
+As of Oct 2026, `basketball/nba`, `football/nfl`, `baseball/mlb` and `hockey/nhl` scoreboards return **HTTP 400** (`"Failed to get events endpoint."`) for `?dates=YYYYMMDD-YYYYMMDD`. Single dates still work. Motorsport and golf ranges still work. Because loaders `.catch(() => EMPTY)`, this failure shows up as silently empty panels, not an error. Use `getTeamSchedule()` for any multi-day team lookup.
+
+### Team schedule score shape
+The team schedule endpoint returns `competitor.score` as `{ value, displayValue }`, not a string. `normalizeTeamScheduleEvent()` flattens it to `displayValue`.
 
 ### F1 multi-competition structure
 Each F1 event has multiple `competitions` inside one event object: FP1, FP2, FP3, Qualifying, **Race**. ESPN stores the **race weekend start date (Friday)** as the event date, not the actual race day (Sunday). `parseRace()` finds the competition where `type.abbreviation === 'Race'` and uses its `date` and `winner`. Never use `competitions[0]` for F1 — that's Friday practice.
