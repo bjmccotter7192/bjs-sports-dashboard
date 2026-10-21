@@ -30,7 +30,7 @@
         </div>
 
         <div class="day-games">
-          @for (item of day.items; track item.kind === 'game' ? item.game.id + item.team.abbreviation : item.kind === 'race' ? item.race.id + item.series.sport : item.tournament.id + item.series.sport) {
+          @for (item of day.items; track item.kind === 'game' ? item.game.id + item.team.sport + item.team.espnId : item.kind === 'race' ? item.race.id + item.series.sport : item.tournament.id + item.series.sport) {
 
             @if (item.kind === 'game') {
               <div

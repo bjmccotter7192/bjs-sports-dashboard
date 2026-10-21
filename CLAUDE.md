@@ -37,10 +37,13 @@ ng build                                          # production build → dist/
 
 | File | Purpose |
 |------|---------|
-| `src/app/core/config/teams.config.ts` | `MY_TEAMS`, `MY_SERIES`, `MY_GOLF` — single source of truth for which teams/series to show |
+| `src/app/core/config/teams.config.ts` | `DEFAULT_CONFIG` — BJ's teams/series/golf. Array order is display order. |
+| `src/app/core/config/leagues.config.ts` | `LEAGUES` registry — every supported league slug, its kind, label, and `hasNews`. Order is News filter order. |
+| `src/app/core/services/dashboard-config.service.ts` | `DashboardConfigService.config` signal — what every view reads. Components never import `DEFAULT_CONFIG` directly. |
+| `src/app/core/utils/fetch-all.ts` | `fetchAll(keys, fetch, fallback)` — parallel fetch per unique key into a `Map`; per-key failures fall back. |
 | `src/app/core/services/espn.service.ts` | All ESPN API calls + parsing. The only file that touches HTTP. |
 | `src/app/core/models/game.model.ts` | Raw ESPN shapes (`EspnEvent`) and normalized app models (`Game`, `Race`, `Tournament`, `TournamentEntry`) |
-| `src/app/core/models/team-config.model.ts` | `TeamConfig` / `SeriesConfig` / `GolfSeriesConfig` / `SportLeague` / `MotorsportLeague` / `GolfLeague` types |
+| `src/app/core/models/team-config.model.ts` | `DashboardConfig` / `TeamConfig` / `SeriesConfig` / `GolfSeriesConfig` / `League` (= `SportLeague` \| `MotorsportLeague` \| `GolfLeague`) types |
 | `src/app/shared/components/team-panel/` | Card for a single team-sport game. Inputs: `team`, `game`, `isLoading`. |
 | `src/app/shared/components/motorsport-panel/` | Card for a single race series. Inputs: `series`, `race`, `isLoading`. |
 | `src/app/shared/components/golf-panel/` | Card for PGA Tour. Inputs: `series`, `tournament`, `isLoading`. Shows top-3 leaderboard inline. |
@@ -48,9 +51,10 @@ ng build                                          # production build → dist/
 | `src/app/features/today/` | Today's games + next race/tournament. Active panels float above golf+motorsports; no-game panels sink below. |
 | `src/app/features/yesterday/` | Last Played — most recent completed game per team in last 14 days. Same dynamic ordering. |
 | `src/app/features/schedule/` | Next 30 days, grouped by date |
-| `src/app/features/news/` | News feed from 7 league sources (NBA, NFL, MLB, NHL, F1, IndyCar, PGA). Filterable by league. |
+| `src/app/features/news/` | News feed, one source per configured league with `hasNews` (NASCAR has none). Filterable by league. |
 | `src/app/testing/test-fixtures.ts` | Fixture factories: `makeGame()`, `makeRace()`, `makeEspnTeamEvent()`, `makeEspnRaceEvent()` |
 | `src/app/testing/mock-espn.service.ts` | `createMockEspnService()` — Vitest mock for component tests |
+| `src/app/testing/dashboard-config.ts` | `provideDashboardConfig()`, `makeConfig()`, `makeTeamConfig()` — override the config in component tests |
 
 ---
 
@@ -89,8 +93,8 @@ ESPN stores tournament dates as UTC timestamps (e.g. `"2026-06-18T04:00Z"`). Par
 ### Time display — always Central
 All pre-game times use Angular's `DatePipe` with `'America/Chicago'` as the explicit timezone and a static `CT` label (e.g. `"Jun 22 · 1:05 PM CT"`). Do not rely on the browser locale or the `z` format token — `z` falls back to `GMT-5` in Linux/k8s environments that lack IANA abbreviation data. ESPN's raw `status.detail` string (which says "EDT") is suppressed for pre-game panels; the DatePipe output is the canonical time display.
 
-### Knicks abbreviation
-ESPN abbreviates the NY Knicks as `'NY'`, not `'NYK'`. Confirmed via curl on the NBA scoreboard. The config has `abbreviation: 'NY'` — do not change it.
+### Match teams by id, not abbreviation
+Games are matched to configured teams by ESPN team id (`TeamConfig.espnId` ↔ `competitor.team.id`). Abbreviations are display-only — ESPN's are inconsistent (the Knicks are `'NY'`, not `'NYK'`).
 
 ### Team schedule vs scoreboard shape
 `getTeamSchedule()` returns a different JSON shape than `getScoreboard()`:
@@ -141,6 +145,11 @@ providers: [{ provide: EspnService, useValue: mockEspn }, provideZonelessChangeD
 mockEspn.findTeamGame.mockReturnValue(makeGame());
 ```
 
+Views read `DashboardConfigService`, which defaults to `DEFAULT_CONFIG`. To test with other teams:
+```typescript
+providers: [..., provideDashboardConfig(makeConfig({ teams: [makeTeamConfig({ espnId: '18', sport: 'basketball/nba' })] }))]
+```
+
 ### Waiting for resource() to resolve
 ```typescript
 fixture.detectChanges();       // starts resource loaders
@@ -159,31 +168,24 @@ fixture.detectChanges();
 
 ## Adding a New Team
 
-1. Add to `MY_TEAMS` in `src/app/core/config/teams.config.ts`
-2. Find the correct ESPN `abbreviation`:
+1. Add a `TeamConfig` to `DEFAULT_CONFIG.teams` in `src/app/core/config/teams.config.ts`, at the position you want it displayed.
+2. Find its `espnId`, `abbreviation`, and colors:
    ```bash
-   curl "https://site.api.espn.com/apis/site/v2/sports/{sport}/scoreboard" | python3 -m json.tool | grep abbreviation
+   curl -s --compressed "https://site.api.espn.com/apis/site/v2/sports/{sport}/teams" | python3 -m json.tool | grep -B3 -A6 '"shortDisplayName": "TeamName"'
    ```
-3. Find the `espnId` (needed for schedule view):
-   ```bash
-   curl "https://site.api.espn.com/apis/site/v2/sports/{sport}/teams" | python3 -m json.tool | grep -A2 '"shortDisplayName": "TeamName"'
-   ```
-4. If the new team is in an existing sport (NBA/NFL/MLB/NHL), the Today and Last Played views pick it up automatically — including dynamic panel ordering (teams with a game float above golf+motorsports; no-game teams sink below). The Schedule view requires adding a new `resource()` entry in `schedule.component.ts` (pattern: one resource per team using `getTeamSchedule()`).
+3. That's it for an existing league — every view picks it up from the config.
 
-## Adding a New Motorsport Series
+## Adding a New Series (motorsport or golf)
 
-1. Add to `MY_SERIES` in `teams.config.ts` with the verified ESPN slug
-2. Add the new `MotorsportLeague` union type in `team-config.model.ts`
-3. Add a new `resource()` in Today, Yesterday, and Schedule components following the existing motorsport pattern
+1. Add it to `DEFAULT_CONFIG.series` (motorsport, `kind: 'series'`) or `DEFAULT_CONFIG.golf` (`kind: 'golf'`).
+2. That's it for an existing league. `GolfPanelComponent` and `TournamentStatsModalComponent` work for any golf series.
 
-## Adding a New Golf / Non-Motorsport Series
+## Adding a New League
 
-Golf uses a **separate** type hierarchy from motorsports — do not add it to `MY_SERIES`.
-
-1. Add to `MY_GOLF` in `teams.config.ts` as a `GolfSeriesConfig` (has `kind: 'golf'`)
-2. Add the new `GolfLeague` union member in `team-config.model.ts`
-3. Add a `resource()` in Today, Yesterday, Schedule, and News components following the existing PGA pattern
-4. The `GolfPanelComponent` and `TournamentStatsModalComponent` are reusable for any golf series
+1. Verify the ESPN slug returns 200 (and check its response shape against the existing parsers).
+2. Add the slug to the matching union in `team-config.model.ts` (`SportLeague` / `MotorsportLeague` / `GolfLeague`).
+3. Add an entry to `LEAGUES` in `leagues.config.ts`. Set `hasNews: false` if `/news` returns empty `articles`.
+4. Sport-specific display logic (e.g. `periodLabel`/`hasClock` in `TeamPanelComponent`, the MLB boxscore path in `GameStatsModalComponent`) may need a case for the new sport.
 
 ---
 

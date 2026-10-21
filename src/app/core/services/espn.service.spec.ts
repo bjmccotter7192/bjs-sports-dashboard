@@ -151,26 +151,33 @@ describe('EspnService', () => {
 
   describe('findTeamGame', () => {
     it('returns null for undefined scoreboard', () => {
-      expect(service.findTeamGame(undefined, 'NYY')).toBeNull();
+      expect(service.findTeamGame(undefined, '10')).toBeNull();
     });
 
     it('returns null for empty events', () => {
-      expect(service.findTeamGame({ events: [] }, 'NYY')).toBeNull();
+      expect(service.findTeamGame({ events: [] }, '10')).toBeNull();
     });
 
     it('returns the game when the team is in the home slot', () => {
-      const scoreboard = { events: [makeEspnTeamEvent({ homeAbbr: 'NYY', awayAbbr: 'CHW' })] };
-      expect(service.findTeamGame(scoreboard, 'NYY')).not.toBeNull();
+      const scoreboard = { events: [makeEspnTeamEvent({ homeId: '10', awayId: '4' })] };
+      expect(service.findTeamGame(scoreboard, '10')).not.toBeNull();
     });
 
     it('returns the game when the team is in the away slot', () => {
-      const scoreboard = { events: [makeEspnTeamEvent({ homeAbbr: 'CHW', awayAbbr: 'NYY' })] };
-      expect(service.findTeamGame(scoreboard, 'NYY')).not.toBeNull();
+      const scoreboard = { events: [makeEspnTeamEvent({ homeId: '4', awayId: '10' })] };
+      expect(service.findTeamGame(scoreboard, '10')).not.toBeNull();
     });
 
     it('returns null when team is not in any game', () => {
-      const scoreboard = { events: [makeEspnTeamEvent({ homeAbbr: 'CHW', awayAbbr: 'BOS' })] };
-      expect(service.findTeamGame(scoreboard, 'NYY')).toBeNull();
+      const scoreboard = { events: [makeEspnTeamEvent({ homeId: '4', awayId: '2' })] };
+      expect(service.findTeamGame(scoreboard, '10')).toBeNull();
+    });
+
+    it('matches on team id, not abbreviation', () => {
+      // ESPN abbreviates the Knicks as 'NY' — id matching makes that irrelevant
+      const scoreboard = { events: [makeEspnTeamEvent({ homeId: '18', homeAbbr: 'NY' })] };
+      expect(service.findTeamGame(scoreboard, '18')).not.toBeNull();
+      expect(service.findTeamGame(scoreboard, 'NY')).toBeNull();
     });
   });
 
@@ -178,48 +185,48 @@ describe('EspnService', () => {
 
   describe('findLastPlayedGame', () => {
     it('returns null when no completed games exist', () => {
-      const scoreboard = { events: [makeEspnTeamEvent({ homeAbbr: 'NYY', state: 'pre' })] };
-      expect(service.findLastPlayedGame(scoreboard, 'NYY')).toBeNull();
+      const scoreboard = { events: [makeEspnTeamEvent({ homeId: '10', state: 'pre' })] };
+      expect(service.findLastPlayedGame(scoreboard, '10')).toBeNull();
     });
 
     it('returns the most recent completed game (not an earlier one)', () => {
       // Two completed NYY games — the later one should win.
-      const older = makeEspnTeamEvent({ id: 'g1', homeAbbr: 'NYY', state: 'post', date: '2026-06-10T23:00Z' });
-      const newer = makeEspnTeamEvent({ id: 'g2', homeAbbr: 'NYY', state: 'post', date: '2026-06-15T23:00Z' });
+      const older = makeEspnTeamEvent({ id: 'g1', homeId: '10', state: 'post', date: '2026-06-10T23:00Z' });
+      const newer = makeEspnTeamEvent({ id: 'g2', homeId: '10', state: 'post', date: '2026-06-15T23:00Z' });
       const scoreboard = { events: [older, newer] };
-      const game = service.findLastPlayedGame(scoreboard, 'NYY');
+      const game = service.findLastPlayedGame(scoreboard, '10');
       expect(game?.id).toBe('g2');
     });
 
     it('ignores games for other teams', () => {
-      const scoreboard = { events: [makeEspnTeamEvent({ homeAbbr: 'CHW', state: 'post' })] };
-      expect(service.findLastPlayedGame(scoreboard, 'NYY')).toBeNull();
+      const scoreboard = { events: [makeEspnTeamEvent({ homeId: '4', awayId: '2', state: 'post' })] };
+      expect(service.findLastPlayedGame(scoreboard, '10')).toBeNull();
     });
 
     it('ignores completed games before the since cutoff', () => {
-      const old = makeEspnTeamEvent({ id: 'g1', homeAbbr: 'NYY', state: 'post', date: '2026-06-01T23:00Z' });
+      const old = makeEspnTeamEvent({ id: 'g1', homeId: '10', state: 'post', date: '2026-06-01T23:00Z' });
       const scoreboard = { events: [old] };
-      expect(service.findLastPlayedGame(scoreboard, 'NYY', new Date('2026-06-10T00:00Z'))).toBeNull();
-      expect(service.findLastPlayedGame(scoreboard, 'NYY', new Date('2026-05-30T00:00Z'))?.id).toBe('g1');
+      expect(service.findLastPlayedGame(scoreboard, '10', new Date('2026-06-10T00:00Z'))).toBeNull();
+      expect(service.findLastPlayedGame(scoreboard, '10', new Date('2026-05-30T00:00Z'))?.id).toBe('g1');
     });
   });
 
   // ── getAllTeamGames ───────────────────────────────────────────────────────
 
   describe('getAllTeamGames', () => {
-    it('returns all games matching any of the supplied abbreviations', () => {
+    it('returns all games involving any of the supplied team ids', () => {
       const events = [
-        makeEspnTeamEvent({ id: 'g1', homeAbbr: 'NYY', state: 'pre' }),
-        makeEspnTeamEvent({ id: 'g2', homeAbbr: 'WSH', state: 'pre' }),
-        makeEspnTeamEvent({ id: 'g3', homeAbbr: 'BOS', state: 'pre' }),
+        makeEspnTeamEvent({ id: 'g1', homeId: '10', awayId: '4', state: 'pre' }),
+        makeEspnTeamEvent({ id: 'g2', homeId: '20', awayId: '4', state: 'pre' }),
+        makeEspnTeamEvent({ id: 'g3', homeId: '2',  awayId: '4', state: 'pre' }),
       ];
-      const result = service.getAllTeamGames({ events }, ['NYY', 'WSH']);
+      const result = service.getAllTeamGames({ events }, ['10', '20']);
       expect(result).toHaveLength(2);
       expect(result.map(g => g.id)).toEqual(expect.arrayContaining(['g1', 'g2']));
     });
 
     it('returns empty array for undefined scoreboard', () => {
-      expect(service.getAllTeamGames(undefined, ['NYY'])).toEqual([]);
+      expect(service.getAllTeamGames(undefined, ['10'])).toEqual([]);
     });
   });
 
@@ -229,6 +236,7 @@ describe('EspnService', () => {
     it('correctly separates home and away teams', () => {
       const game = service.parseGame(makeEspnTeamEvent({ homeAbbr: 'NYY', awayAbbr: 'CHW' }));
       expect(game.homeTeam.abbreviation).toBe('NYY');
+      expect(game.homeTeam.id).toBe('10');
       expect(game.awayTeam.abbreviation).toBe('CHW');
     });
 

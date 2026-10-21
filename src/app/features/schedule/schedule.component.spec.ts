@@ -1,8 +1,8 @@
 /**
  * ScheduleComponent spec
  *
- * - 9 separate resource() instances: 5 team + 3 motorsport + 1 PGA Tour.
- * - isLoading() is true until ALL 9 resources settle.
+ * - 3 resource() instances (teams, series, golf), each fetching per configured entry.
+ * - isLoading() is true until all three settle.
  * - scheduleDays() groups games, races, and tournaments by date key (YYYYMMDD).
  */
 import { TestBed, ComponentFixture } from '@angular/core/testing';
@@ -13,7 +13,8 @@ import { ScheduleComponent } from './schedule.component';
 import { EspnService } from '../../core/services/espn.service';
 import { createMockEspnService } from '../../testing/mock-espn.service';
 import { makeGame, makeRace } from '../../testing/test-fixtures';
-import { MY_TEAMS, MY_SERIES } from '../../core/config/teams.config';
+import { DEFAULT_CONFIG } from '../../core/config/teams.config';
+import { provideDashboardConfig, makeConfig, makeTeamConfig } from '../../testing/dashboard-config';
 
 describe('ScheduleComponent', () => {
   let fixture: ComponentFixture<ScheduleComponent>;
@@ -126,7 +127,7 @@ describe('ScheduleComponent', () => {
     const item = days[0].items[0];
     expect(item.kind).toBe('game');
     if (item.kind === 'game') {
-      expect(item.team).toBe(MY_TEAMS[0]);
+      expect(item.team).toBe(DEFAULT_CONFIG.teams[0]);
       expect(item.game).toBe(game);
     }
   });
@@ -147,7 +148,7 @@ describe('ScheduleComponent', () => {
     expect(item.kind).toBe('race');
     if (item.kind === 'race') {
       expect(item.race).toBe(race);
-      expect(item.series).toBe(MY_SERIES[0]);
+      expect(item.series).toBe(DEFAULT_CONFIG.series[0]);
     }
   });
 
@@ -219,13 +220,46 @@ describe('ScheduleComponent', () => {
   it('calls getTeamSchedule once per team', async () => {
     fixture.detectChanges();
     await settle();
-    expect(mockEspn.getTeamSchedule).toHaveBeenCalledTimes(MY_TEAMS.length);
+    expect(mockEspn.getTeamSchedule).toHaveBeenCalledTimes(DEFAULT_CONFIG.teams.length);
   });
 
   it('calls getScoreboard for each motorsport series plus PGA Tour', async () => {
     fixture.detectChanges();
     await settle();
-    // 3 motorsport series + 1 PGA Tour = 4
-    expect(mockEspn.getScoreboard).toHaveBeenCalledTimes(MY_SERIES.length + 1);
+    expect(mockEspn.getScoreboard).toHaveBeenCalledTimes(DEFAULT_CONFIG.series.length + DEFAULT_CONFIG.golf.length);
+  });
+
+  // ── Custom config ───────────────────────────────────────────────────────────
+
+  describe('with a custom config', () => {
+    async function createWith(config: ReturnType<typeof makeConfig>) {
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [ScheduleComponent],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          { provide: EspnService, useValue: mockEspn },
+          provideDashboardConfig(config),
+        ],
+      }).compileComponents();
+      fixture = TestBed.createComponent(ScheduleComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+      await settle();
+    }
+
+    it('fetches schedules only for configured teams', async () => {
+      await createWith(makeConfig({ teams: [makeTeamConfig({ espnId: '13', sport: 'hockey/nhl' })] }));
+      expect(mockEspn.getTeamSchedule).toHaveBeenCalledTimes(1);
+      expect(mockEspn.getTeamSchedule).toHaveBeenCalledWith('hockey/nhl', '13');
+      expect(mockEspn.getScoreboard).not.toHaveBeenCalled();
+    });
+
+    it('shows the empty state for an empty config', async () => {
+      await createWith(makeConfig());
+      expect(component.isLoading()).toBe(false);
+      expect(fixture.nativeElement.querySelector('.empty-state')).not.toBeNull();
+    });
   });
 });

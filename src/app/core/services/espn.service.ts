@@ -107,15 +107,15 @@ export class EspnService {
 
   // ── Team sport helpers ──────────────────────────────────────────────
 
-  /** Find a specific team's game in today/date scoreboard */
+  /** Find a specific team's game (by ESPN team id) in today/date scoreboard */
   findTeamGame(
     scoreboard: EspnScoreboardResponse | undefined,
-    abbr: string
+    teamId: string
   ): Game | null {
     if (!scoreboard?.events?.length) return null;
     const event = scoreboard.events.find((e) =>
       e.competitions?.[0]?.competitors?.some(
-        (c) => c.team?.abbreviation === abbr
+        (c) => c.team?.id === teamId
       )
     );
     return event ? this.parseGame(event) : null;
@@ -124,7 +124,7 @@ export class EspnService {
   /** Find most recent *completed* game for a team, optionally no earlier than `since` */
   findLastPlayedGame(
     scoreboard: EspnScoreboardResponse | undefined,
-    abbr: string,
+    teamId: string,
     since?: Date
   ): Game | null {
     if (!scoreboard?.events?.length) return null;
@@ -134,7 +134,7 @@ export class EspnService {
           e.status.type.state === 'post' &&
           (!since || new Date(e.date) >= since) &&
           e.competitions?.[0]?.competitors?.some(
-            (c) => c.team?.abbreviation === abbr
+            (c) => c.team?.id === teamId
           )
       )
       .sort(
@@ -143,16 +143,16 @@ export class EspnService {
     return completed.length ? this.parseGame(completed[0]) : null;
   }
 
-  /** Return all games matching any of the given abbreviations */
+  /** Return all games involving any of the given ESPN team ids */
   getAllTeamGames(
     scoreboard: EspnScoreboardResponse | undefined,
-    abbrs: string[]
+    teamIds: string[]
   ): Game[] {
     if (!scoreboard?.events?.length) return [];
     return scoreboard.events
       .filter((e) =>
         e.competitions?.[0]?.competitors?.some((c) =>
-          abbrs.includes(c.team?.abbreviation ?? '')
+          teamIds.includes(c.team?.id ?? '')
         )
       )
       .map((e) => this.parseGame(e));
@@ -332,6 +332,7 @@ export class EspnService {
 
   private parseTeam(competitor: EspnCompetitor): GameTeam {
     return {
+      id: competitor.team?.id ?? '',
       abbreviation: competitor.team?.abbreviation ?? '',
       displayName: competitor.team?.displayName ?? '',
       logo: competitor.team?.logo ?? '',

@@ -7,7 +7,7 @@
 
 <div class="teams-grid">
   <!-- Teams with a game today (float to top) -->
-  @for (entry of activeTeamPanels(); track entry.team.abbreviation) {
+  @for (entry of activeTeamPanels(); track entry.team.sport + entry.team.espnId) {
     <app-team-panel
       [team]="entry.team"
       [game]="entry.game"
@@ -17,12 +17,14 @@
   }
 
   <!-- PGA Tour + Motorsports always follow active teams -->
-  <app-golf-panel
-    [series]="golf"
-    [tournament]="pgaData().tournament"
-    [isLoading]="pgaData().isLoading"
-    (panelClick)="selectedTournament.set($event)"
-  />
+  @for (entry of golfData(); track entry.series.sport) {
+    <app-golf-panel
+      [series]="entry.series"
+      [tournament]="entry.tournament"
+      [isLoading]="entry.isLoading"
+      (panelClick)="selectedTournament.set($event)"
+    />
+  }
   @for (entry of seriesData(); track entry.series.sport) {
     <app-motorsport-panel
       [series]="entry.series"
@@ -33,7 +35,7 @@
   }
 
   <!-- Teams with no game today (sink to bottom) -->
-  @for (entry of inactiveTeamPanels(); track entry.team.abbreviation) {
+  @for (entry of inactiveTeamPanels(); track entry.team.sport + entry.team.espnId) {
     <app-team-panel
       [team]="entry.team"
       [game]="entry.game"
