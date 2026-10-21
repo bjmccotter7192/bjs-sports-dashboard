@@ -5,8 +5,9 @@ import { isEmptyConfig } from '../../core/config/config-validation';
 import { EspnService, formatDateYMD } from '../../core/services/espn.service';
 import { DashboardConfigService } from '../../core/services/dashboard-config.service';
 import { fetchAll } from '../../core/utils/fetch-all';
+import { leagueLabel } from '../../core/config/leagues.config';
 import { Game, Race, Tournament, EspnScoreboardResponse } from '../../core/models/game.model';
-import { TeamConfig, SeriesConfig, GolfSeriesConfig } from '../../core/models/team-config.model';
+import { TeamConfig, SeriesConfig, GolfSeriesConfig, League } from '../../core/models/team-config.model';
 
 export type ScheduleItem =
   | { kind: 'game';       game: Game;             team: TeamConfig }
@@ -52,6 +53,10 @@ export class ScheduleComponent {
     params: () => this.config().golf.map(g => g.sport),
     loader: ({ params }) => fetchAll(params, sport => this.espn.getScoreboard(sport, this.motorsportDateRange), EMPTY),
   });
+
+  label(slug: League) {
+    return leagueLabel(slug);
+  }
 
   isLoading = computed(() =>
     this.teamSchedules.isLoading() || this.seriesBoards.isLoading() || this.golfBoards.isLoading()

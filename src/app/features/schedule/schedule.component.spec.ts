@@ -250,6 +250,12 @@ describe('ScheduleComponent', () => {
       await settle();
     }
 
+    it('labels games with the league name, not the raw ESPN slug', async () => {
+      mockEspn.getGamesInDateRange.mockReturnValue([makeGame({ date: new Date('2026-06-20T18:05:00Z') })]);
+      await createWith(makeConfig({ teams: [makeTeamConfig({ sport: 'soccer/usa.1' })] }));
+      expect(fixture.nativeElement.querySelector('.sport-tag')?.textContent?.trim()).toBe('MLS');
+    });
+
     it('fetches schedules only for configured teams', async () => {
       await createWith(makeConfig({ teams: [makeTeamConfig({ espnId: '13', sport: 'hockey/nhl' })] }));
       expect(mockEspn.getTeamSchedule).toHaveBeenCalledTimes(1);

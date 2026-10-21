@@ -68,11 +68,19 @@ ng build                                          # production build → dist/
 
 ### Sport slugs (verified working)
 ```
-basketball/nba     football/nfl     baseball/mlb     hockey/nhl
+basketball/nba     basketball/wnba  football/nfl     baseball/mlb     hockey/nhl
+soccer/usa.1 (MLS) soccer/eng.1 (EPL) soccer/usa.nwsl (NWSL)
+football/college-football  basketball/mens-college-basketball  basketball/womens-college-basketball
 racing/f1          racing/nascar-premier             racing/irl
 golf/pga
 ```
 `nascar-sprint-cup`, `nascar-cup`, `indycar` are all **wrong** and return 400.
+
+### Per-league quirks (handled by `LEAGUES` fields)
+- **College basketball** scoreboard returns only Top-25 games by default (15 vs 92 on a sample date). `scoreboardParams: { groups: '50', limit: '400' }` gets all D-I games. College football's default scoreboard is FBS-level, so FCS teams can be missing from Today; Last Played and Schedule use team schedules and are unaffected.
+- **Soccer** team schedules return only *results* by default; upcoming games need `?fixture=true`. `splitSchedule: true` makes `getTeamSchedule()` fetch both and merge by event id.
+- **Soccer draws**: ESPN sets `winner: false` on both sides. `TeamPanelComponent.isDraw` shows a **D** badge. Without it a draw renders as a loss.
+- **Live clock**: `periodLabel` (Q / P / H) drives the `2Q 4:22` display. Leagues without one (MLB innings, soccer match minute) show ESPN's `status.detail` instead.
 
 ### NASCAR news endpoint returns empty
 `racing/nascar-premier/news` responds HTTP 200 but with `articles: []`. ESPN's CORS-accessible news endpoint simply doesn't populate NASCAR articles. The `now.core.api.espn.com` domain has NASCAR content but lacks `Access-Control-Allow-Origin`, so it can't be used in a client-side app without a proxy. NASCAR is excluded from the News view entirely.
@@ -88,7 +96,7 @@ This is a browser-only app, so an endpoint is usable only if it sends `Access-Co
 ```bash
 curl -s -o /dev/null -D - -H "Origin: http://localhost:4200" "<url>" | grep -i access-control-allow-origin
 ```
-Known **no CORS**: `/{sport}/teams` and `/{sport}/teams/{id}`. So `getTeams()` reads `/{sport}/groups` (full team list, no colors) and `getTeamColors()` reads `/{sport}/teams/{id}/schedule` (top-level `team.color`). Known OK: scoreboard, `teams/{id}/schedule`, groups, standings, summary, news.
+Known **no CORS**: `/{sport}/teams` and `/{sport}/teams/{id}`. So `getTeams()` reads standings (`https://site.api.espn.com/apis/v2/sports/{sport}/standings`, note `/apis/v2` and not `/apis/site/v2`). That gives the full team list with no colors. `getTeamColors()` reads `/{sport}/teams/{id}/schedule` (top-level `team.color`). `/groups` also has CORS, but it's empty for WNBA and soccer and capped at 25 per division for college, so don't use it for team lists. Known OK: scoreboard, `teams/{id}/schedule`, groups, standings, summary, news.
 
 ### Team schedule score shape
 The team schedule endpoint returns `competitor.score` as `{ value, displayValue }`, not a string. `normalizeTeamScheduleEvent()` flattens it to `displayValue`.
@@ -193,10 +201,11 @@ fixture.detectChanges();
 
 ## Adding a New League
 
-1. Verify the ESPN slug returns 200 (and check its response shape against the existing parsers).
-2. Add the slug to the matching union in `team-config.model.ts` (`SportLeague` / `MotorsportLeague` / `GolfLeague`).
-3. Add an entry to `LEAGUES` in `leagues.config.ts`. Set `hasNews: false` if `/news` returns empty `articles`.
-4. Sport-specific display logic (e.g. `periodLabel`/`hasClock` in `TeamPanelComponent`, the MLB boxscore path in `GameStatsModalComponent`) may need a case for the new sport.
+1. Verify the ESPN slug, and check **CORS** (see above) on scoreboard, standings, `teams/{id}/schedule`, summary and news.
+2. Check that standings lists every team, that the scoreboard isn't filtered by default (needs `scoreboardParams`?), and that the team schedule includes upcoming games (needs `splitSchedule`?).
+3. Add the slug to the matching union in `team-config.model.ts` (`SportLeague` / `MotorsportLeague` / `GolfLeague`).
+4. Add an entry to `LEAGUES` in `leagues.config.ts` with `periodLabel` if it has a game clock. Set `hasNews: false` if `/news` returns empty `articles`. Its position in `LEAGUES` sets its Settings tab and News filter order.
+5. Add any other sport-specific display logic, e.g. the MLB boxscore path in `GameStatsModalComponent`.
 
 ---
 

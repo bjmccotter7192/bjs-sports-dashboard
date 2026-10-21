@@ -18,6 +18,7 @@ import {
 } from '../models/game.model';
 import { SportLeague, MotorsportLeague, GolfLeague, TeamColors, TeamOption } from '../models/team-config.model';
 import { isHexColor, sanitizeTeam } from '../config/config-validation';
+import { leagueInfo } from '../config/leagues.config';
 
 interface EspnRawNewsArticle {
   id: number;
@@ -36,12 +37,14 @@ export class EspnService {
   private http = inject(HttpClient);
   private readonly baseUrl =
     'https://site.api.espn.com/apis/site/v2/sports';
+  private readonly standingsUrl =
+    'https://site.api.espn.com/apis/v2/sports';
 
   getScoreboard(
     sport: SportLeague | MotorsportLeague | GolfLeague,
     date?: string
   ): Promise<EspnScoreboardResponse> {
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = { ...leagueInfo(sport)?.scoreboardParams };
     if (date) params['dates'] = date;
     return firstValueFrom(
       this.http.get<EspnScoreboardResponse>(
@@ -51,13 +54,27 @@ export class EspnService {
     );
   }
 
-  /** Full team season schedule — no 100-event cap. Returns normalized EspnScoreboardResponse. */
-  getTeamSchedule(sport: SportLeague, espnId: string): Promise<EspnScoreboardResponse> {
-    return firstValueFrom(
-      this.http.get<any>(`${this.baseUrl}/${sport}/teams/${espnId}/schedule`)
-    ).then(data => ({
-      events: (data.events ?? []).map((e: any) => this.normalizeTeamScheduleEvent(e)),
-    }));
+  /**
+   * Full team season schedule — no 100-event cap. Returns normalized EspnScoreboardResponse.
+   * Soccer (`splitSchedule`) returns only results by default, so upcoming fixtures are
+   * fetched separately and merged.
+   */
+  async getTeamSchedule(sport: SportLeague, espnId: string): Promise<EspnScoreboardResponse> {
+    const url = `${this.baseUrl}/${sport}/teams/${espnId}/schedule`;
+    const requests = [firstValueFrom(this.http.get<any>(url))];
+    if (leagueInfo(sport)?.splitSchedule) {
+      requests.push(firstValueFrom(this.http.get<any>(url, { params: { fixture: 'true' } })));
+    }
+    const seen = new Set<string>();
+    const events: EspnEvent[] = [];
+    for (const data of await Promise.all(requests)) {
+      for (const e of data?.events ?? []) {
+        if (seen.has(e.id)) continue;
+        seen.add(e.id);
+        events.push(this.normalizeTeamScheduleEvent(e));
+      }
+    }
+    return { events };
   }
 
   private normalizeTeamScheduleEvent(e: any): EspnEvent {
@@ -507,15 +524,18 @@ export class EspnService {
   /**
    * Every team in a league, for the Settings picker. Sorted by name; invalid entries dropped.
    *
-   * `/{sport}/teams` has no Access-Control-Allow-Origin header, so this reads `/{sport}/groups`
-   * (conferences → divisions → teams) instead. Groups carry no team colors — options get
-   * placeholder colors until `getTeamColors()` fills them in.
+   * `/{sport}/teams` has no Access-Control-Allow-Origin header, and `/{sport}/groups` is empty
+   * for some leagues (WNBA, soccer) and capped at 25 per division for college. Standings
+   * (`/apis/v2/...`, nested conference → division → entries[].team) is complete for every
+   * league. It carries no team colors — options get placeholder colors until
+   * `getTeamColors()` fills them in.
    */
   async getTeams(sport: SportLeague): Promise<TeamOption[]> {
-    const data = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/${sport}/groups`));
+    const data = await firstValueFrom(this.http.get<any>(`${this.standingsUrl}/${sport}/standings`));
     const byId = new Map<string, TeamOption>();
-    const visit = (group: any) => {
-      for (const team of group?.teams ?? []) {
+    const visit = (node: any) => {
+      for (const entry of node?.standings?.entries ?? []) {
+        const team = entry?.team;
         const config = sanitizeTeam({
           espnId: team?.id,
           abbreviation: team?.abbreviation,
@@ -529,9 +549,9 @@ export class EspnService {
           byId.set(config.espnId, { config, logo: team?.logos?.[0]?.href ?? '' });
         }
       }
-      for (const child of group?.children ?? []) visit(child);
+      for (const child of node?.children ?? []) visit(child);
     };
-    for (const group of data?.groups ?? []) visit(group);
+    visit(data);
     return [...byId.values()].sort((a, b) => a.config.name.localeCompare(b.config.name));
   }
 

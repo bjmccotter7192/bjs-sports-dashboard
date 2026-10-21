@@ -2,7 +2,7 @@ import { Component, computed, input, output } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { TeamConfig, SportLeague } from '../../../core/models/team-config.model';
 import { Game } from '../../../core/models/game.model';
-import { leagueLabel } from '../../../core/config/leagues.config';
+import { leagueInfo, leagueLabel } from '../../../core/config/leagues.config';
 
 @Component({
   selector: 'app-team-panel',
@@ -28,19 +28,10 @@ export class TeamPanelComponent {
 
   sportLabel = computed(() => leagueLabel(this.team().sport));
 
-  periodLabel = computed(() => {
-    switch (this.team().sport) {
-      case 'basketball/nba':
-      case 'football/nfl':
-        return 'Q';
-      case 'hockey/nhl':
-        return 'P';
-      default:
-        return '';
-    }
-  });
+  periodLabel = computed(() => leagueInfo(this.team().sport)?.periodLabel ?? '');
 
-  hasClock = computed(() => this.team().sport !== 'baseball/mlb');
+  // Leagues without a period label (MLB innings, soccer minutes) show ESPN's status text instead
+  hasClock = computed(() => !!this.periodLabel());
 
   myTeamSide = computed(() => {
     const g = this.game();
@@ -62,11 +53,17 @@ export class TeamPanelComponent {
     return side === 'home' ? g.awayTeam : g.homeTeam;
   });
 
+  // Soccer draws: ESPN marks neither side the winner
+  isDraw = computed(() => {
+    const g = this.game();
+    return g?.status.state === 'post' && !g.homeTeam.isWinner && !g.awayTeam.isWinner
+      && g.homeTeam.score !== '' && g.homeTeam.score === g.awayTeam.score;
+  });
   isWin = computed(
     () => this.game()?.status.state === 'post' && (this.myTeam()?.isWinner ?? false)
   );
   isLoss = computed(
-    () => this.game()?.status.state === 'post' && !(this.myTeam()?.isWinner ?? true)
+    () => this.game()?.status.state === 'post' && !this.isDraw() && !(this.myTeam()?.isWinner ?? true)
   );
   isLive = computed(() => this.game()?.status.state === 'in');
   isPre = computed(() => this.game()?.status.state === 'pre');

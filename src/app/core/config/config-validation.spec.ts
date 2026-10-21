@@ -171,4 +171,11 @@ describe('config-validation', () => {
       expect(dashboardTitle('   ')).toBe('Sports Dashboard');
     });
   });
+
+  it('accepts teams from every team league in the registry', () => {
+    for (const sport of ['basketball/wnba', 'soccer/usa.1', 'soccer/eng.1', 'soccer/usa.nwsl', 'football/college-football',
+      'basketball/mens-college-basketball', 'basketball/womens-college-basketball']) {
+      expect(sanitizeTeam(makeTeamConfig({ sport: sport as never }))).not.toBeNull();
+    }
+  });
 });

@@ -370,4 +370,65 @@ describe('TeamPanelComponent', () => {
 
     expect(events).toHaveLength(0);
   });
+
+  // ── New leagues ──────────────────────────────────────────────────────────
+
+  it.each([
+    ['basketball/wnba', 'Q', true],
+    ['basketball/mens-college-basketball', 'H', true],
+    ['basketball/womens-college-basketball', 'Q', true],
+    ['football/college-football', 'Q', true],
+    ['soccer/usa.1', '', false],
+    ['soccer/eng.1', '', false],
+    ['soccer/usa.nwsl', '', false],
+  ] as const)('%s: periodLabel "%s", hasClock %s', (sport, label, clock) => {
+    fixture.componentRef.setInput('team', { ...knicks, sport });
+    fixture.detectChanges();
+    expect(fixture.componentInstance.periodLabel()).toBe(label);
+    expect(fixture.componentInstance.hasClock()).toBe(clock);
+  });
+
+  it('shows ESPN status text (match minute) for a live soccer game', () => {
+    fixture.componentRef.setInput('team', { ...knicks, sport: 'soccer/usa.1' });
+    fixture.componentRef.setInput('game', makeGame({
+      homeTeam: { ...makeGame().homeTeam, id: '18' },
+      status: { state: 'in', description: 'In Progress', detail: "67'", period: 2, clock: "67'" },
+    }));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.game-status')?.textContent?.trim()).toBe("67'");
+  });
+
+  it('shows the league label in the header for new leagues', () => {
+    fixture.componentRef.setInput('team', { ...knicks, sport: 'soccer/eng.1' });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.sport-badge')?.textContent?.trim()).toBe('EPL');
+  });
+
+  // ── Draws ────────────────────────────────────────────────────────────────
+
+  function finished(homeScore: string, awayScore: string, homeWins: boolean, awayWins: boolean) {
+    return makeGame({
+      homeTeam: { ...makeGame().homeTeam, id: '18', score: homeScore, isWinner: homeWins },
+      awayTeam: { ...makeGame().awayTeam, score: awayScore, isWinner: awayWins },
+      status: { state: 'post', description: 'Final', detail: 'FT' },
+    });
+  }
+
+  it('shows a D badge (not L) for a draw', () => {
+    fixture.componentRef.setInput('team', { ...knicks, sport: 'soccer/usa.1' });
+    fixture.componentRef.setInput('game', finished('1', '1', false, false));
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.result-badge.draw')?.textContent?.trim()).toBe('D');
+    expect(el.querySelector('.result-badge.loss')).toBeNull();
+    expect(el.querySelector('.result-badge.win')).toBeNull();
+  });
+
+  it('still shows L for a soccer loss', () => {
+    fixture.componentRef.setInput('team', { ...knicks, sport: 'soccer/usa.1' });
+    fixture.componentRef.setInput('game', finished('0', '2', false, true));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.result-badge.loss')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('.result-badge.draw')).toBeNull();
+  });
 });

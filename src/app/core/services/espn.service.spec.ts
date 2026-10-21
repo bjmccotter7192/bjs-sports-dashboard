@@ -57,6 +57,24 @@ describe('EspnService', () => {
       await promise;
     });
 
+    it('adds league-specific params (college hoops would otherwise return Top-25 only)', async () => {
+      const promise = service.getScoreboard('basketball/mens-college-basketball', '20260307');
+      const req = http.expectOne(r => r.url.includes('/mens-college-basketball/scoreboard'));
+      expect(req.request.params.get('groups')).toBe('50');
+      expect(req.request.params.get('limit')).toBe('400');
+      expect(req.request.params.get('dates')).toBe('20260307');
+      req.flush({ events: [] });
+      await promise;
+    });
+
+    it('adds no extra params for leagues without them', async () => {
+      const promise = service.getScoreboard('baseball/mlb');
+      const req = http.expectOne(r => r.url.includes('/baseball/mlb/scoreboard'));
+      expect(req.request.params.keys()).toEqual([]);
+      req.flush({ events: [] });
+      await promise;
+    });
+
     it('appends a dates query param when provided', async () => {
       const promise = service.getScoreboard('baseball/mlb', '20260616');
       const req = http.expectOne(r => r.url.includes('/baseball/mlb/scoreboard'));
@@ -77,22 +95,24 @@ describe('EspnService', () => {
   // ── getTeams ─────────────────────────────────────────────────────────────
 
   describe('getTeams', () => {
+    const STANDINGS = 'https://site.api.espn.com/apis/v2/sports';
     const rangers = { id: '13', abbreviation: 'NYR', displayName: 'New York Rangers', shortDisplayName: 'Rangers',
       logos: [{ href: 'https://example.com/nyr.png' }] };
     const ducks = { id: '25', abbreviation: 'ANA', displayName: 'Anaheim Ducks', shortDisplayName: 'Ducks', logos: [] };
+    const entries = (...teams: unknown[]) => ({ standings: { entries: teams.map(team => ({ team })) } });
 
-    it('reads the CORS-enabled groups endpoint, not /teams', async () => {
+    it('reads the CORS-enabled standings endpoint, not /teams', async () => {
       const promise = service.getTeams('hockey/nhl');
-      http.expectOne(`${BASE}/hockey/nhl/groups`).flush({ groups: [] });
+      http.expectOne(`${STANDINGS}/hockey/nhl/standings`).flush({});
       expect(await promise).toEqual([]);
     });
 
-    it('flattens conferences → divisions → teams into sorted options with placeholder colors', async () => {
+    it('flattens conference → division standings into sorted options with placeholder colors', async () => {
       const promise = service.getTeams('hockey/nhl');
-      http.expectOne(`${BASE}/hockey/nhl/groups`).flush({
-        groups: [
-          { name: 'Eastern', children: [{ name: 'Metropolitan', teams: [rangers] }] },
-          { name: 'Western', children: [{ name: 'Pacific', teams: [ducks] }] },
+      http.expectOne(`${STANDINGS}/hockey/nhl/standings`).flush({
+        children: [
+          { name: 'Eastern', children: [{ name: 'Metropolitan', ...entries(rangers) }] },
+          { name: 'Western', ...entries(ducks) },
         ],
       });
       const result = await promise;
@@ -107,24 +127,20 @@ describe('EspnService', () => {
       expect(result[0].logo).toBe('');
     });
 
-    it('also reads teams listed directly on a group, without duplicates', async () => {
-      const promise = service.getTeams('hockey/nhl');
-      http.expectOne(`${BASE}/hockey/nhl/groups`).flush({
-        groups: [{ teams: [rangers], children: [{ teams: [rangers, ducks] }] }],
+    it('reads top-level standings (single-table leagues like the EPL) without duplicates', async () => {
+      const promise = service.getTeams('soccer/eng.1');
+      http.expectOne(`${STANDINGS}/soccer/eng.1/standings`).flush({
+        ...entries(rangers), children: [entries(rangers, ducks)],
       });
       expect((await promise).map(o => o.config.espnId)).toEqual(['25', '13']);
     });
 
-    it('drops teams with invalid fields and tolerates an empty response', async () => {
+    it('drops teams with invalid fields', async () => {
       const promise = service.getTeams('basketball/nba');
-      http.expectOne(`${BASE}/basketball/nba/groups`).flush({
-        groups: [{ children: [{ teams: [{ id: 'abc', abbreviation: 'X', displayName: 'Bad Id', shortDisplayName: 'Bad' }] }] }],
+      http.expectOne(`${STANDINGS}/basketball/nba/standings`).flush({
+        children: [entries({ id: 'abc', abbreviation: 'X', displayName: 'Bad Id', shortDisplayName: 'Bad' })],
       });
       expect(await promise).toEqual([]);
-
-      const empty = service.getTeams('basketball/nba');
-      http.expectOne(`${BASE}/basketball/nba/groups`).flush({});
-      expect(await empty).toEqual([]);
     });
   });
 
@@ -149,6 +165,32 @@ describe('EspnService', () => {
   // ── getTeamSchedule ──────────────────────────────────────────────────────
 
   describe('getTeamSchedule', () => {
+    const scheduledEvent = (id: string, state: 'pre' | 'post') => ({
+      id, date: '2026-10-20T19:00Z', name: 'T', shortName: 'T', status: null,
+      competitions: [{ date: '2026-10-20T19:00Z', competitors: [],
+        status: { type: { state, completed: state === 'post', description: '', shortDetail: '' } } }],
+    });
+
+    it('merges soccer results with fixtures (fixture=true), without duplicates', async () => {
+      const promise = service.getTeamSchedule('soccer/eng.1', '382');
+      const reqs = http.match(r => r.url.endsWith('/soccer/eng.1/teams/382/schedule'));
+      expect(reqs).toHaveLength(2);
+      const fixtures = reqs.find(r => r.request.params.get('fixture') === 'true')!;
+      const results = reqs.find(r => !r.request.params.has('fixture'))!;
+      results.flush({ events: [scheduledEvent('r1', 'post'), scheduledEvent('shared', 'post')] });
+      fixtures.flush({ events: [scheduledEvent('f1', 'pre'), scheduledEvent('shared', 'pre')] });
+      const result = await promise;
+      expect(result.events.map(e => e.id)).toEqual(['r1', 'shared', 'f1']);
+    });
+
+    it('makes a single request for non-soccer leagues', async () => {
+      const promise = service.getTeamSchedule('basketball/wnba', '20');
+      const req = http.expectOne(`${BASE}/basketball/wnba/teams/20/schedule`);
+      expect(req.request.params.has('fixture')).toBe(false);
+      req.flush({ events: [] });
+      await promise;
+    });
+
     it('calls the team schedule endpoint', async () => {
       const promise = service.getTeamSchedule('baseball/mlb', '10');
       http.expectOne(`${BASE}/baseball/mlb/teams/10/schedule`).flush({ events: [] });
