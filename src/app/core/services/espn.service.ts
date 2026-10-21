@@ -16,7 +16,8 @@ import {
   PlayerStat,
   NewsArticle,
 } from '../models/game.model';
-import { SportLeague, MotorsportLeague, GolfLeague } from '../models/team-config.model';
+import { SportLeague, MotorsportLeague, GolfLeague, TeamColors, TeamOption } from '../models/team-config.model';
+import { isHexColor, sanitizeTeam } from '../config/config-validation';
 
 interface EspnRawNewsArticle {
   id: number;
@@ -26,6 +27,9 @@ interface EspnRawNewsArticle {
   links?: { web?: { href: string } };
   published: string;
 }
+
+const FALLBACK_PRIMARY = '#666666';
+const FALLBACK_SECONDARY = '#999999';
 
 @Injectable({ providedIn: 'root' })
 export class EspnService {
@@ -500,6 +504,55 @@ export class EspnService {
   }
 
   // ── News ──────────────────────────────────────────────────────────────
+  /**
+   * Every team in a league, for the Settings picker. Sorted by name; invalid entries dropped.
+   *
+   * `/{sport}/teams` has no Access-Control-Allow-Origin header, so this reads `/{sport}/groups`
+   * (conferences → divisions → teams) instead. Groups carry no team colors — options get
+   * placeholder colors until `getTeamColors()` fills them in.
+   */
+  async getTeams(sport: SportLeague): Promise<TeamOption[]> {
+    const data = await firstValueFrom(this.http.get<any>(`${this.baseUrl}/${sport}/groups`));
+    const byId = new Map<string, TeamOption>();
+    const visit = (group: any) => {
+      for (const team of group?.teams ?? []) {
+        const config = sanitizeTeam({
+          espnId: team?.id,
+          abbreviation: team?.abbreviation,
+          name: team?.displayName,
+          shortName: team?.shortDisplayName || team?.name,
+          sport,
+          primaryColor: FALLBACK_PRIMARY,
+          secondaryColor: FALLBACK_SECONDARY,
+        });
+        if (config && !byId.has(config.espnId)) {
+          byId.set(config.espnId, { config, logo: team?.logos?.[0]?.href ?? '' });
+        }
+      }
+      for (const child of group?.children ?? []) visit(child);
+    };
+    for (const group of data?.groups ?? []) visit(group);
+    return [...byId.values()].sort((a, b) => a.config.name.localeCompare(b.config.name));
+  }
+
+  /**
+   * A team's colors. The per-team schedule endpoint is the only CORS-enabled source
+   * that includes them (`team.color` / `team.alternateColor`, hex without '#').
+   */
+  async getTeamColors(sport: SportLeague, espnId: string): Promise<TeamColors> {
+    const data = await firstValueFrom(
+      this.http.get<any>(`${this.baseUrl}/${sport}/teams/${espnId}/schedule`)
+    );
+    const hex = (c: unknown, fallback: string) => {
+      const value = typeof c === 'string' ? `#${c}` : '';
+      return isHexColor(value) ? value : fallback;
+    };
+    return {
+      primaryColor: hex(data?.team?.color, FALLBACK_PRIMARY),
+      secondaryColor: hex(data?.team?.alternateColor, FALLBACK_SECONDARY),
+    };
+  }
+
   async getNews(
     sport: string,
     sourceName: string,

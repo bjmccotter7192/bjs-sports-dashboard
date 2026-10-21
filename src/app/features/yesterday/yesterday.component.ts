@@ -8,6 +8,8 @@ import { GolfPanelComponent } from '../../shared/components/golf-panel/golf-pane
 import { GameStatsModalComponent } from '../../shared/components/game-stats-modal/game-stats-modal.component';
 import { RaceStatsModalComponent } from '../../shared/components/race-stats-modal/race-stats-modal.component';
 import { TournamentStatsModalComponent } from '../../shared/components/tournament-stats-modal/tournament-stats-modal.component';
+import { EmptyConfigComponent } from '../../shared/components/empty-config/empty-config.component';
+import { isEmptyConfig } from '../../core/config/config-validation';
 import { EspnScoreboardResponse, Game, Race, Tournament } from '../../core/models/game.model';
 import { SportLeague, MotorsportLeague } from '../../core/models/team-config.model';
 
@@ -18,13 +20,14 @@ const EMPTY: EspnScoreboardResponse = { events: [] };
 
 @Component({
   selector: 'app-yesterday',
-  imports: [TeamPanelComponent, MotorsportPanelComponent, GolfPanelComponent, GameStatsModalComponent, RaceStatsModalComponent, TournamentStatsModalComponent],
+  imports: [TeamPanelComponent, MotorsportPanelComponent, GolfPanelComponent, GameStatsModalComponent, RaceStatsModalComponent, TournamentStatsModalComponent, EmptyConfigComponent],
   templateUrl: './yesterday.component.html',
   styleUrl: './yesterday.component.scss',
 })
 export class YesterdayComponent {
   private espn = inject(EspnService);
   private config = inject(DashboardConfigService).config;
+  readonly isEmpty = computed(() => isEmptyConfig(this.config()));
 
   selectedGame       = signal<SelectedGame | null>(null);
   selectedRace       = signal<SelectedRace | null>(null);

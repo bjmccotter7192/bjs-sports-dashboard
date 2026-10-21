@@ -28,6 +28,8 @@ export function createMockEspnService(): MockEspnService {
     fetchGameLeaders: vi.fn().mockResolvedValue([]),
     fetchMlbBoxscore: vi.fn().mockResolvedValue([]),
     getNews: vi.fn().mockResolvedValue([]),
+    getTeams: vi.fn().mockResolvedValue([]),
+    getTeamColors: vi.fn().mockResolvedValue({ primaryColor: '#123456', secondaryColor: '#abcdef' }),
 
     // ── Synchronous helpers — return null / empty by default ──
     findTeamGame:       vi.fn().mockReturnValue(null satisfies Game | null),

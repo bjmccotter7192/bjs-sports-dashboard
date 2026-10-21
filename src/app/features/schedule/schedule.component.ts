@@ -1,5 +1,7 @@
 import { Component, computed, inject, resource } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { EmptyConfigComponent } from '../../shared/components/empty-config/empty-config.component';
+import { isEmptyConfig } from '../../core/config/config-validation';
 import { EspnService, formatDateYMD } from '../../core/services/espn.service';
 import { DashboardConfigService } from '../../core/services/dashboard-config.service';
 import { fetchAll } from '../../core/utils/fetch-all';
@@ -21,13 +23,14 @@ const EMPTY: EspnScoreboardResponse = { events: [] };
 
 @Component({
   selector: 'app-schedule',
-  imports: [DatePipe],
+  imports: [DatePipe, EmptyConfigComponent],
   templateUrl: './schedule.component.html',
   styleUrl: './schedule.component.scss',
 })
 export class ScheduleComponent {
   private espn = inject(EspnService);
   private config = inject(DashboardConfigService).config;
+  readonly isEmpty = computed(() => isEmptyConfig(this.config()));
 
   private rangeStart = new Date();
   private rangeEnd   = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d; })();

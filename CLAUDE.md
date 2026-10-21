@@ -6,7 +6,9 @@ Project context for AI assistants picking up this codebase.
 
 ## What This Is
 
-Personal sports dashboard. Fetches live data from ESPN's unofficial public API (no key required). Dark-themed Angular SPA with four views: Today's games, Last Played, Schedule, and News. Nine panels: NY Knicks, NY Giants, NY Yankees, Washington Nationals, NY Rangers, F1, NASCAR Cup, IndyCar, PGA Tour.
+Sports dashboard where each user picks their own teams. Fetches live data from ESPN's unofficial public API (no key required). Dark-themed Angular SPA with four dashboard views (Today's games, Last Played, Schedule, News) plus Settings and Import.
+
+User picks live in `localStorage` (no backend, no accounts). A share link (`#/import?c=…`) moves a setup to another browser. A first-time visitor sees a "Pick your teams" prompt on every view.
 
 ---
 
@@ -37,9 +39,9 @@ ng build                                          # production build → dist/
 
 | File | Purpose |
 |------|---------|
-| `src/app/core/config/teams.config.ts` | `DEFAULT_CONFIG` — BJ's teams/series/golf. Array order is display order. |
-| `src/app/core/config/leagues.config.ts` | `LEAGUES` registry — every supported league slug, its kind, label, and `hasNews`. Order is News filter order. |
-| `src/app/core/services/dashboard-config.service.ts` | `DashboardConfigService.config` signal — what every view reads. Components never import `DEFAULT_CONFIG` directly. |
+| `src/app/core/config/config-validation.ts` | Untrusted-input boundary: `sanitizeConfig`/`sanitizeTeam`, localStorage (de)serialization, share-code encode/decode. |
+| `src/app/core/config/leagues.config.ts` | `LEAGUES` registry (slug, kind, label, `hasNews`; order is News filter order), `SERIES_OPTIONS`/`GOLF_OPTIONS` catalog, `MAX_TEAMS`. |
+| `src/app/core/services/dashboard-config.service.ts` | `DashboardConfigService` — config signal every view reads, plus mutators (`addTeam`, `moveTeam`, `setSeriesEnabled`, `replace`, …). Persists to `localStorage` key `sports-dashboard:config`. |
 | `src/app/core/utils/fetch-all.ts` | `fetchAll(keys, fetch, fallback)` — parallel fetch per unique key into a `Map`; per-key failures fall back. |
 | `src/app/core/services/espn.service.ts` | All ESPN API calls + parsing. The only file that touches HTTP. |
 | `src/app/core/models/game.model.ts` | Raw ESPN shapes (`EspnEvent`) and normalized app models (`Game`, `Race`, `Tournament`, `TournamentEntry`) |
@@ -52,9 +54,13 @@ ng build                                          # production build → dist/
 | `src/app/features/yesterday/` | Last Played — most recent completed game per team in last 14 days. Same dynamic ordering. |
 | `src/app/features/schedule/` | Next 30 days, grouped by date |
 | `src/app/features/news/` | News feed, one source per configured league with `hasNews` (NASCAR has none). Filterable by league. |
+| `src/app/features/settings/` | Team picker (from ESPN `/teams`), reorder/remove, series + golf toggles, share link, reset. Changes save immediately. |
+| `src/app/features/import/` | Applies a share link: decodes ids, resolves names from ESPN, previews, replaces config on confirm. |
+| `src/app/shared/components/empty-config/` | "Pick your teams" prompt shown by every view when the config is empty. |
 | `src/app/testing/test-fixtures.ts` | Fixture factories: `makeGame()`, `makeRace()`, `makeEspnTeamEvent()`, `makeEspnRaceEvent()` |
 | `src/app/testing/mock-espn.service.ts` | `createMockEspnService()` — Vitest mock for component tests |
-| `src/app/testing/dashboard-config.ts` | `provideDashboardConfig()`, `makeConfig()`, `makeTeamConfig()` — override the config in component tests |
+| `src/app/testing/dashboard-config.ts` | `provideDashboardConfig()` (defaults to `SAMPLE_CONFIG`), `makeConfig()`, `makeTeamConfig()` — override the config in component tests |
+| `src/app/testing/sample-config.ts` | `SAMPLE_CONFIG` — a realistic 5-team + 3-series + PGA config for specs. Not used by app code. |
 
 ---
 
@@ -76,6 +82,13 @@ The league scoreboard caps at 100 events. MLB plays ~15 games/day, so 100 events
 
 ### Team-sport scoreboards reject date ranges
 As of Oct 2026, `basketball/nba`, `football/nfl`, `baseball/mlb` and `hockey/nhl` scoreboards return **HTTP 400** (`"Failed to get events endpoint."`) for `?dates=YYYYMMDD-YYYYMMDD`. Single dates still work. Motorsport and golf ranges still work. Because loaders `.catch(() => EMPTY)`, this failure shows up as silently empty panels, not an error. Use `getTeamSchedule()` for any multi-day team lookup.
+
+### CORS — check before using any new endpoint
+This is a browser-only app, so an endpoint is usable only if it sends `Access-Control-Allow-Origin`. Unit tests mock HTTP and **cannot** catch this. Check with:
+```bash
+curl -s -o /dev/null -D - -H "Origin: http://localhost:4200" "<url>" | grep -i access-control-allow-origin
+```
+Known **no CORS**: `/{sport}/teams` and `/{sport}/teams/{id}`. So `getTeams()` reads `/{sport}/groups` (full team list, no colors) and `getTeamColors()` reads `/{sport}/teams/{id}/schedule` (top-level `team.color`). Known OK: scoreboard, `teams/{id}/schedule`, groups, standings, summary, news.
 
 ### Team schedule score shape
 The team schedule endpoint returns `competitor.score` as `{ value, displayValue }`, not a string. `normalizeTeamScheduleEvent()` flattens it to `displayValue`.
@@ -145,7 +158,7 @@ providers: [{ provide: EspnService, useValue: mockEspn }, provideZonelessChangeD
 mockEspn.findTeamGame.mockReturnValue(makeGame());
 ```
 
-Views read `DashboardConfigService`, which defaults to `DEFAULT_CONFIG`. To test with other teams:
+Views read `DashboardConfigService`, which starts empty in a fresh browser. View specs provide `provideDashboardConfig()` (= `SAMPLE_CONFIG`); to test with other teams:
 ```typescript
 providers: [..., provideDashboardConfig(makeConfig({ teams: [makeTeamConfig({ espnId: '18', sport: 'basketball/nba' })] }))]
 ```
@@ -166,19 +179,17 @@ fixture.detectChanges();
 
 ---
 
-## Adding a New Team
+## User Config — Storage and Share Links
 
-1. Add a `TeamConfig` to `DEFAULT_CONFIG.teams` in `src/app/core/config/teams.config.ts`, at the position you want it displayed.
-2. Find its `espnId`, `abbreviation`, and colors:
-   ```bash
-   curl -s --compressed "https://site.api.espn.com/apis/site/v2/sports/{sport}/teams" | python3 -m json.tool | grep -B3 -A6 '"shortDisplayName": "TeamName"'
-   ```
-3. That's it for an existing league — every view picks it up from the config.
+- **localStorage** (`sports-dashboard:config`) holds `{ v: 1, teams: TeamConfig[], series: slug[], golf: slug[] }`. Every load runs `sanitizeConfig`: invalid teams dropped, duplicates removed, capped at `MAX_TEAMS`, series/golf resolved against the catalog. Unknown `v` or bad JSON → empty config. Bump the version and add a migration if the shape changes.
+- **Dashboard name** lives under its own key, `sports-dashboard:name`, so imports and "Remove everything" never touch it and share links never carry it. `sanitizeName` strips control characters and caps at 30 chars. It doesn't trim, so spaces survive while typing; `dashboardTitle()` trims at display time. With no name the title is "Sports Dashboard". `App` mirrors the title into the browser tab via `Title`.
+- **Share codes** are base64url JSON `{ v: 1, t: [[sport, espnId, primary?, secondary?]], s: [...], g: [...] }`. They deliberately carry **no display text** — Import resolves names from ESPN `/teams`, so a crafted link can't put arbitrary strings on the page. Colors are kept only if both are `#rrggbb`.
+- Colors go into inline `--primary`/`--secondary` style bindings, so they must pass `isHexColor` wherever they enter the app (storage, share code, ESPN `/teams`).
 
-## Adding a New Series (motorsport or golf)
+## Adding a New Motorsport / Golf Series
 
-1. Add it to `DEFAULT_CONFIG.series` (motorsport, `kind: 'series'`) or `DEFAULT_CONFIG.golf` (`kind: 'golf'`).
-2. That's it for an existing league. `GolfPanelComponent` and `TournamentStatsModalComponent` work for any golf series.
+1. Add it to `SERIES_OPTIONS` (motorsport, `kind: 'series'`) or `GOLF_OPTIONS` (`kind: 'golf'`) in `leagues.config.ts`. It shows up as a toggle in Settings.
+2. If its league is new, follow "Adding a New League" below.
 
 ## Adding a New League
 
@@ -191,6 +202,6 @@ fixture.detectChanges();
 
 ## Known Constraints
 
-- ESPN's API has no official docs or SLA. Endpoints can change or return 400 without notice. All `resource()` loaders have `.catch(() => EMPTY)` so a broken endpoint shows an empty panel rather than breaking the whole view.
+- ESPN's API has no official docs or SLA. Endpoints can change or return 400 without notice. Dashboard loaders go through `fetchAll()`, which falls back per key, so a broken endpoint shows an empty panel rather than breaking the whole view. The Settings team picker deliberately does not swallow errors — it shows "Couldn't load teams".
 - No authentication, no backend. This is a pure client-side app reading public ESPN data.
 - No e2e tests configured. Vitest unit tests only.

@@ -13,7 +13,7 @@ import { ScheduleComponent } from './schedule.component';
 import { EspnService } from '../../core/services/espn.service';
 import { createMockEspnService } from '../../testing/mock-espn.service';
 import { makeGame, makeRace } from '../../testing/test-fixtures';
-import { DEFAULT_CONFIG } from '../../core/config/teams.config';
+import { SAMPLE_CONFIG } from '../../testing/sample-config';
 import { provideDashboardConfig, makeConfig, makeTeamConfig } from '../../testing/dashboard-config';
 
 describe('ScheduleComponent', () => {
@@ -35,6 +35,7 @@ describe('ScheduleComponent', () => {
         provideZonelessChangeDetection(),
         provideRouter([]),
         { provide: EspnService, useValue: mockEspn },
+        provideDashboardConfig(),
       ],
     }).compileComponents();
 
@@ -127,7 +128,7 @@ describe('ScheduleComponent', () => {
     const item = days[0].items[0];
     expect(item.kind).toBe('game');
     if (item.kind === 'game') {
-      expect(item.team).toBe(DEFAULT_CONFIG.teams[0]);
+      expect(item.team).toBe(SAMPLE_CONFIG.teams[0]);
       expect(item.game).toBe(game);
     }
   });
@@ -148,7 +149,7 @@ describe('ScheduleComponent', () => {
     expect(item.kind).toBe('race');
     if (item.kind === 'race') {
       expect(item.race).toBe(race);
-      expect(item.series).toBe(DEFAULT_CONFIG.series[0]);
+      expect(item.series).toBe(SAMPLE_CONFIG.series[0]);
     }
   });
 
@@ -220,13 +221,13 @@ describe('ScheduleComponent', () => {
   it('calls getTeamSchedule once per team', async () => {
     fixture.detectChanges();
     await settle();
-    expect(mockEspn.getTeamSchedule).toHaveBeenCalledTimes(DEFAULT_CONFIG.teams.length);
+    expect(mockEspn.getTeamSchedule).toHaveBeenCalledTimes(SAMPLE_CONFIG.teams.length);
   });
 
   it('calls getScoreboard for each motorsport series plus PGA Tour', async () => {
     fixture.detectChanges();
     await settle();
-    expect(mockEspn.getScoreboard).toHaveBeenCalledTimes(DEFAULT_CONFIG.series.length + DEFAULT_CONFIG.golf.length);
+    expect(mockEspn.getScoreboard).toHaveBeenCalledTimes(SAMPLE_CONFIG.series.length + SAMPLE_CONFIG.golf.length);
   });
 
   // ── Custom config ───────────────────────────────────────────────────────────
@@ -256,10 +257,16 @@ describe('ScheduleComponent', () => {
       expect(mockEspn.getScoreboard).not.toHaveBeenCalled();
     });
 
-    it('shows the empty state for an empty config', async () => {
+    it('prompts to pick teams instead of the schedule for an empty config', async () => {
       await createWith(makeConfig());
-      expect(component.isLoading()).toBe(false);
+      expect(fixture.nativeElement.querySelector('app-empty-config')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.empty-state')).toBeNull();
+    });
+
+    it('shows the no-events state (not the setup prompt) when configured teams have no games', async () => {
+      await createWith(makeConfig({ teams: [makeTeamConfig()] }));
       expect(fixture.nativeElement.querySelector('.empty-state')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('app-empty-config')).toBeNull();
     });
   });
 });

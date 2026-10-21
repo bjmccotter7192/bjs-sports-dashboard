@@ -7,9 +7,9 @@
 import { signal } from '@angular/core';
 import { DashboardConfigService } from '../core/services/dashboard-config.service';
 import { DashboardConfig, TeamConfig } from '../core/models/team-config.model';
-import { DEFAULT_CONFIG } from '../core/config/teams.config';
+import { SAMPLE_CONFIG } from './sample-config';
 
-export function provideDashboardConfig(config: DashboardConfig = DEFAULT_CONFIG) {
+export function provideDashboardConfig(config: DashboardConfig = SAMPLE_CONFIG) {
   return { provide: DashboardConfigService, useValue: { config: signal(config).asReadonly() } };
 }
 

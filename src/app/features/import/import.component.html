@@ -1,0 +1,50 @@
+<div class="view-header">
+  <div class="header-text">
+    <h1 class="view-title">Import dashboard</h1>
+    <span class="view-date">From a shared link</span>
+  </div>
+</div>
+
+@if (!selection) {
+  <div class="import-card">
+    <p class="error">This isn't a valid dashboard link.</p>
+    <a class="action-btn" routerLink="/today">Back to dashboard</a>
+  </div>
+} @else if (isLoading()) {
+  <div class="import-card">
+    <p class="hint">Looking up teams…</p>
+  </div>
+} @else if (isEmptyPreview()) {
+  <div class="import-card">
+    <p class="error">None of the teams in this link could be found on ESPN.</p>
+    <a class="action-btn" routerLink="/today">Back to dashboard</a>
+  </div>
+} @else {
+  <div class="import-card">
+    <p>This link will set your dashboard to:</p>
+    <ul class="preview-list">
+      @for (team of preview()!.config.teams; track team.sport + team.espnId) {
+        <li [style.--primary]="team.primaryColor">
+          <span class="name">{{ team.name }}</span>
+          <span class="tag">{{ label(team.sport) }}</span>
+        </li>
+      }
+      @for (s of preview()!.config.series; track s.sport) {
+        <li [style.--primary]="s.primaryColor"><span class="name">{{ s.name }}</span></li>
+      }
+      @for (g of preview()!.config.golf; track g.sport) {
+        <li [style.--primary]="g.primaryColor"><span class="name">{{ g.name }}</span></li>
+      }
+    </ul>
+    @if (preview()!.missing) {
+      <p class="hint">{{ preview()!.missing }} team(s) in this link couldn't be found and will be skipped.</p>
+    }
+    @if (replacesExisting) {
+      <p class="warning">This replaces your current dashboard.</p>
+    }
+    <div class="actions">
+      <button class="action-btn primary" (click)="apply()">Use this dashboard</button>
+      <a class="action-btn" routerLink="/today">Cancel</a>
+    </div>
+  </div>
+}

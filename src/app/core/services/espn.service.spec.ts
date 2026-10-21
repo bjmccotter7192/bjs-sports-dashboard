@@ -74,6 +74,78 @@ describe('EspnService', () => {
     });
   });
 
+  // ── getTeams ─────────────────────────────────────────────────────────────
+
+  describe('getTeams', () => {
+    const rangers = { id: '13', abbreviation: 'NYR', displayName: 'New York Rangers', shortDisplayName: 'Rangers',
+      logos: [{ href: 'https://example.com/nyr.png' }] };
+    const ducks = { id: '25', abbreviation: 'ANA', displayName: 'Anaheim Ducks', shortDisplayName: 'Ducks', logos: [] };
+
+    it('reads the CORS-enabled groups endpoint, not /teams', async () => {
+      const promise = service.getTeams('hockey/nhl');
+      http.expectOne(`${BASE}/hockey/nhl/groups`).flush({ groups: [] });
+      expect(await promise).toEqual([]);
+    });
+
+    it('flattens conferences → divisions → teams into sorted options with placeholder colors', async () => {
+      const promise = service.getTeams('hockey/nhl');
+      http.expectOne(`${BASE}/hockey/nhl/groups`).flush({
+        groups: [
+          { name: 'Eastern', children: [{ name: 'Metropolitan', teams: [rangers] }] },
+          { name: 'Western', children: [{ name: 'Pacific', teams: [ducks] }] },
+        ],
+      });
+      const result = await promise;
+      expect(result.map(o => o.config.name)).toEqual(['Anaheim Ducks', 'New York Rangers']);
+      expect(result[1]).toEqual({
+        config: {
+          kind: 'team', espnId: '13', abbreviation: 'NYR', name: 'New York Rangers', shortName: 'Rangers',
+          sport: 'hockey/nhl', primaryColor: '#666666', secondaryColor: '#999999',
+        },
+        logo: 'https://example.com/nyr.png',
+      });
+      expect(result[0].logo).toBe('');
+    });
+
+    it('also reads teams listed directly on a group, without duplicates', async () => {
+      const promise = service.getTeams('hockey/nhl');
+      http.expectOne(`${BASE}/hockey/nhl/groups`).flush({
+        groups: [{ teams: [rangers], children: [{ teams: [rangers, ducks] }] }],
+      });
+      expect((await promise).map(o => o.config.espnId)).toEqual(['25', '13']);
+    });
+
+    it('drops teams with invalid fields and tolerates an empty response', async () => {
+      const promise = service.getTeams('basketball/nba');
+      http.expectOne(`${BASE}/basketball/nba/groups`).flush({
+        groups: [{ children: [{ teams: [{ id: 'abc', abbreviation: 'X', displayName: 'Bad Id', shortDisplayName: 'Bad' }] }] }],
+      });
+      expect(await promise).toEqual([]);
+
+      const empty = service.getTeams('basketball/nba');
+      http.expectOne(`${BASE}/basketball/nba/groups`).flush({});
+      expect(await empty).toEqual([]);
+    });
+  });
+
+  // ── getTeamColors ────────────────────────────────────────────────────────
+
+  describe('getTeamColors', () => {
+    it('reads colors from the team schedule endpoint', async () => {
+      const promise = service.getTeamColors('basketball/nba', '18');
+      http.expectOne(`${BASE}/basketball/nba/teams/18/schedule`)
+        .flush({ team: { id: '18', color: '1d428a', alternateColor: 'f58426' }, events: [] });
+      expect(await promise).toEqual({ primaryColor: '#1d428a', secondaryColor: '#f58426' });
+    });
+
+    it('falls back to grey for missing or malformed colors', async () => {
+      const promise = service.getTeamColors('basketball/nba', '18');
+      http.expectOne(`${BASE}/basketball/nba/teams/18/schedule`)
+        .flush({ team: { color: 'zzz', alternateColor: null } });
+      expect(await promise).toEqual({ primaryColor: '#666666', secondaryColor: '#999999' });
+    });
+  });
+
   // ── getTeamSchedule ──────────────────────────────────────────────────────
 
   describe('getTeamSchedule', () => {

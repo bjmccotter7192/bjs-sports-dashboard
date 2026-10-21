@@ -24,6 +24,16 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'settings',
+    loadComponent: () =>
+      import('./features/settings/settings.component').then((m) => m.SettingsComponent),
+  },
+  {
+    path: 'import',
+    loadComponent: () =>
+      import('./features/import/import.component').then((m) => m.ImportComponent),
+  },
+  {
     path: 'news',
     loadComponent: () =>
       import('./features/news/news.component').then((m) => m.NewsComponent),
