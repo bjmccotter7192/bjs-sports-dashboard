@@ -84,6 +84,37 @@ export function formatInZone(date: Date, zone: string, style: ZonedStyle): strin
   return `${day} · ${time} ${label}`;
 }
 
+/**
+ * ESPN files scoreboard games under their US Eastern calendar day (a 9:50 PM ET tip that
+ * starts after midnight UTC is still listed under that ET day), so league pages page by it.
+ */
+export const ESPN_DAY_ZONE = 'America/New_York';
+
+const DATE_KEY = /^(\d{4})(\d{2})(\d{2})$/;
+
+/** True for a real calendar date in YYYYMMDD form. */
+export function isDateKey(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const m = DATE_KEY.exec(value);
+  if (!m) return false;
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3];
+}
+
+/** Move a YYYYMMDD key by whole days (calendar math, unaffected by DST). */
+export function shiftDateKey(key: string, days: number): string {
+  const m = DATE_KEY.exec(key)!;
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + days));
+  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, '0')}${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+
+/** "Tue, Oct 20" for a YYYYMMDD key. */
+export function formatDateKey(key: string, options: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' }): string {
+  const m = DATE_KEY.exec(key)!;
+  return new Intl.DateTimeFormat('en-US', { ...options, timeZone: 'UTC' })
+    .format(new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])));
+}
+
 /** YYYYMMDD of the calendar day `date` falls on in `zone` — for grouping by day. */
 export function dateKeyInZone(date: Date, zone: string): string {
   const parts = new Intl.DateTimeFormat('en-US', {

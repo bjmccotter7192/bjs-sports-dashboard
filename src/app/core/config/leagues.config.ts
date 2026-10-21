@@ -48,6 +48,16 @@ export function leagueLabel(slug: League): string {
   return leagueInfo(slug)?.label ?? slug;
 }
 
+/** URL code for a league page: '/league/nba', '/league/epl'. */
+export function leagueRouteKey(slug: League): string {
+  return leagueLabel(slug).toLowerCase();
+}
+
+/** Team league for a URL code, or undefined. Racing/golf have no league page yet. */
+export function teamLeagueByRouteKey(key: string | null | undefined): LeagueInfo | undefined {
+  return LEAGUES.find(l => l.kind === 'team' && l.label.toLowerCase() === key);
+}
+
 export const TEAM_LEAGUES = LEAGUES.filter(l => l.kind === 'team');
 
 /** Max teams a dashboard can hold — Schedule and Last Played make one request per team. */

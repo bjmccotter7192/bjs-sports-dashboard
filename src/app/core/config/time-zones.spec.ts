@@ -1,5 +1,5 @@
 import {
-  TIME_ZONE_OPTIONS, browserTimeZone, dateKeyInZone, formatInZone, isOverrideOption, isValidTimeZone, zoneLabel,
+  TIME_ZONE_OPTIONS, browserTimeZone, dateKeyInZone, formatDateKey, isDateKey, shiftDateKey, formatInZone, isOverrideOption, isValidTimeZone, zoneLabel,
 } from './time-zones';
 
 const SUMMER = new Date('2026-06-22T17:05:00Z');   // 1:05 PM EDT
@@ -62,5 +62,29 @@ describe('time-zones', () => {
       .mockReturnValue({ timeZone: undefined } as unknown as Intl.ResolvedDateTimeFormatOptions);
     expect(browserTimeZone()).toBe('America/New_York');
     spy.mockRestore();
+  });
+
+  // ── Date keys (league pages) ──────────────────────────────────────────────
+
+  it('validates YYYYMMDD keys as real calendar dates', () => {
+    expect(isDateKey('20261020')).toBe(true);
+    expect(isDateKey('20240229')).toBe(true);
+    expect(isDateKey('20250229')).toBe(false);
+    expect(isDateKey('20261340')).toBe(false);
+    expect(isDateKey('2026-10-20')).toBe(false);
+    expect(isDateKey('<script>')).toBe(false);
+    expect(isDateKey(null)).toBe(false);
+  });
+
+  it('shifts keys across month, year, and DST boundaries', () => {
+    expect(shiftDateKey('20261031', 1)).toBe('20261101');
+    expect(shiftDateKey('20270101', -1)).toBe('20261231');
+    expect(shiftDateKey('20261101', 1)).toBe('20261102');   // US DST ends Nov 1 2026
+    expect(shiftDateKey('20240228', 1)).toBe('20240229');
+  });
+
+  it('formats a key without shifting it through the local zone', () => {
+    expect(formatDateKey('20261020')).toBe('Tue, Oct 20');
+    expect(formatDateKey('20261020', { weekday: 'long', month: 'long', day: 'numeric' })).toBe('Tuesday, October 20');
   });
 });

@@ -18,6 +18,7 @@ Open **Settings** to choose up to 12 teams across the NBA, WNBA, NFL, MLB, NHL, 
 | `/last-played` | Most recent completed game per team (14-day window); last race and tournament per series. Same dynamic ordering. |
 | `/schedule` | All upcoming events for your teams and series over the next 30 days, grouped by date |
 | `/news` | Latest headlines from the leagues you follow (NASCAR has no news feed). Filterable by league. |
+| `/league/:code` | Every game in a league for a day (e.g. `/league/nba`), with day paging and live scores. Opened from the **Leagues ▾** menu, which lists the leagues you follow. |
 | `/settings` | Pick, reorder and remove teams; toggle series; copy a share link |
 | `/import?c=…` | Preview and apply a shared dashboard |
 

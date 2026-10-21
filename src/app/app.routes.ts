@@ -24,6 +24,11 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'league/:league',
+    loadComponent: () =>
+      import('./features/league/league.component').then((m) => m.LeagueComponent),
+  },
+  {
     path: 'settings',
     loadComponent: () =>
       import('./features/settings/settings.component').then((m) => m.SettingsComponent),
