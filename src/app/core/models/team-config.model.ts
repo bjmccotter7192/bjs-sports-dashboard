@@ -39,3 +39,12 @@ export interface GolfSeriesConfig {
   primaryColor: string;
   secondaryColor: string;
 }
+
+export type League = SportLeague | MotorsportLeague | GolfLeague;
+
+/** Everything the dashboard shows. Array order is display order. */
+export interface DashboardConfig {
+  teams: TeamConfig[];
+  series: SeriesConfig[];
+  golf: GolfSeriesConfig[];
+}

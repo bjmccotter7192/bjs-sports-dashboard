@@ -83,7 +83,8 @@ describe('TeamPanelComponent', () => {
     // knicks is home team; homeTeam wins → isWin() should be true.
     const game = makeGame({
       homeTeam: {
-        abbreviation: 'NY',           // matches knicks.abbreviation
+        id: '18',                     // matches knicks.espnId
+        abbreviation: 'NY',
         displayName: 'New York Knicks',
         logo: 'https://example.com/ny.png',
         score: '110',
@@ -91,6 +92,7 @@ describe('TeamPanelComponent', () => {
         primaryColor: '#006BB6',
       },
       awayTeam: {
+        id: '2',
         abbreviation: 'BOS',
         displayName: 'Boston Celtics',
         logo: 'https://example.com/bos.png',
@@ -116,6 +118,7 @@ describe('TeamPanelComponent', () => {
   it('shows LOSS badge when my team lost', () => {
     const game = makeGame({
       homeTeam: {
+        id: '18',
         abbreviation: 'NY',
         displayName: 'New York Knicks',
         logo: 'https://example.com/ny.png',
@@ -124,6 +127,7 @@ describe('TeamPanelComponent', () => {
         primaryColor: '#006BB6',
       },
       awayTeam: {
+        id: '2',
         abbreviation: 'BOS',
         displayName: 'Boston Celtics',
         logo: 'https://example.com/bos.png',
@@ -150,10 +154,10 @@ describe('TeamPanelComponent', () => {
     });
 
     fixture.componentRef.setInput('team', knicks);
-    // homeTeam.abbreviation in makeGame defaults to 'NYY', set to match knicks.
+    // homeTeam.id in makeGame defaults to '10' (NYY), set to match knicks.
     fixture.componentRef.setInput('game', {
       ...game,
-      homeTeam: { ...game.homeTeam, abbreviation: 'NY' },
+      homeTeam: { ...game.homeTeam, id: '18', abbreviation: 'NY' },
     });
     fixture.detectChanges();
 
@@ -167,6 +171,7 @@ describe('TeamPanelComponent', () => {
   it('shows score values for both teams when state is post', () => {
     const game = makeGame({
       homeTeam: {
+        id: '18',
         abbreviation: 'NY',
         displayName: 'New York Knicks',
         logo: 'https://example.com/ny.png',
@@ -175,6 +180,7 @@ describe('TeamPanelComponent', () => {
         primaryColor: '#006BB6',
       },
       awayTeam: {
+        id: '2',
         abbreviation: 'BOS',
         displayName: 'Boston Celtics',
         logo: 'https://example.com/bos.png',
@@ -198,6 +204,7 @@ describe('TeamPanelComponent', () => {
   it('shows the opponent team abbreviation in the matchup', () => {
     const game = makeGame({
       homeTeam: {
+        id: '18',
         abbreviation: 'NY',
         displayName: 'New York Knicks',
         logo: 'https://example.com/ny.png',
@@ -206,6 +213,7 @@ describe('TeamPanelComponent', () => {
         primaryColor: '#006BB6',
       },
       awayTeam: {
+        id: '2',
         abbreviation: 'BOS',
         displayName: 'Boston Celtics',
         logo: 'https://example.com/bos.png',
@@ -336,7 +344,7 @@ describe('TeamPanelComponent', () => {
 
   it('emits panelClick with game and sport when a post-game panel is clicked', () => {
     const game = makeGame({
-      homeTeam: { ...makeGame().homeTeam, abbreviation: 'NY' },
+      homeTeam: { ...makeGame().homeTeam, id: '18', abbreviation: 'NY' },
       status: { state: 'post', description: 'Final', detail: 'Final' },
     });
     fixture.componentRef.setInput('team', knicks);

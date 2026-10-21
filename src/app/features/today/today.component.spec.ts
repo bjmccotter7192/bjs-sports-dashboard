@@ -6,7 +6,8 @@ import { TodayComponent } from './today.component';
 import { EspnService } from '../../core/services/espn.service';
 import { createMockEspnService } from '../../testing/mock-espn.service';
 import { makeGame } from '../../testing/test-fixtures';
-import { MY_TEAMS, MY_SERIES, MY_GOLF } from '../../core/config/teams.config';
+import { DEFAULT_CONFIG } from '../../core/config/teams.config';
+import { provideDashboardConfig, makeConfig, makeTeamConfig } from '../../testing/dashboard-config';
 
 describe('TodayComponent', () => {
   let fixture: ComponentFixture<TodayComponent>;
@@ -53,7 +54,7 @@ describe('TodayComponent', () => {
     await settle();
 
     const panels = fixture.nativeElement.querySelectorAll('app-team-panel');
-    expect(panels.length).toBe(MY_TEAMS.length);
+    expect(panels.length).toBe(DEFAULT_CONFIG.teams.length);
   });
 
   it('renders one app-golf-panel for PGA Tour after resources settle', async () => {
@@ -61,7 +62,7 @@ describe('TodayComponent', () => {
     await settle();
 
     const panels = fixture.nativeElement.querySelectorAll('app-golf-panel');
-    expect(panels.length).toBe(MY_GOLF.length);
+    expect(panels.length).toBe(DEFAULT_CONFIG.golf.length);
   });
 
   it('renders one app-motorsport-panel per motorsport series after resources settle', async () => {
@@ -69,7 +70,7 @@ describe('TodayComponent', () => {
     await settle();
 
     const panels = fixture.nativeElement.querySelectorAll('app-motorsport-panel');
-    expect(panels.length).toBe(MY_SERIES.length);
+    expect(panels.length).toBe(DEFAULT_CONFIG.series.length);
   });
 
   it('renders all panels in the grid', async () => {
@@ -80,7 +81,7 @@ describe('TodayComponent', () => {
     expect(grid).not.toBeNull();
 
     const allPanels = grid.querySelectorAll('app-team-panel, app-motorsport-panel, app-golf-panel');
-    expect(allPanels.length).toBe(MY_TEAMS.length + MY_SERIES.length + MY_GOLF.length);
+    expect(allPanels.length).toBe(DEFAULT_CONFIG.teams.length + DEFAULT_CONFIG.series.length + DEFAULT_CONFIG.golf.length);
   });
 
   // ── teamData computed ───────────────────────────────────────────────────────
@@ -89,7 +90,7 @@ describe('TodayComponent', () => {
     fixture.detectChanges();
     await settle();
 
-    expect(component.teamData().length).toBe(MY_TEAMS.length);
+    expect(component.teamData().length).toBe(DEFAULT_CONFIG.teams.length);
   });
 
   it('teamData() entries have null game when mock returns no data', async () => {
@@ -128,7 +129,7 @@ describe('TodayComponent', () => {
     fixture.detectChanges();
     await settle();
 
-    expect(component.seriesData().length).toBe(MY_SERIES.length);
+    expect(component.seriesData().length).toBe(DEFAULT_CONFIG.series.length);
   });
 
   it('seriesData() entries have null race when mock returns no data', async () => {
@@ -140,20 +141,20 @@ describe('TodayComponent', () => {
     }
   });
 
-  // ── pgaData computed ────────────────────────────────────────────────────────
+  // ── golfData computed ────────────────────────────────────────────────────────
 
-  it('pgaData() tournament is null when mock returns no data', async () => {
+  it('golfData() tournament is null when mock returns no data', async () => {
     fixture.detectChanges();
     await settle();
 
-    expect(component.pgaData().tournament).toBeNull();
+    expect(component.golfData()[0].tournament).toBeNull();
   });
 
-  it('pgaData() isLoading is false after resources settle', async () => {
+  it('golfData() isLoading is false after resources settle', async () => {
     fixture.detectChanges();
     await settle();
 
-    expect(component.pgaData().isLoading).toBe(false);
+    expect(component.golfData()[0].isLoading).toBe(false);
   });
 
   // ── Date label ─────────────────────────────────────────────────────────────
@@ -162,5 +163,62 @@ describe('TodayComponent', () => {
     fixture.detectChanges();
     const dateSpan: HTMLElement = fixture.nativeElement.querySelector('.view-date');
     expect(dateSpan?.textContent?.trim().length).toBeGreaterThan(0);
+  });
+
+  // ── Custom config ───────────────────────────────────────────────────────────
+
+  describe('with a custom config', () => {
+    async function createWith(config: ReturnType<typeof makeConfig>) {
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [TodayComponent],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          { provide: EspnService, useValue: mockEspn },
+          provideDashboardConfig(config),
+        ],
+      }).compileComponents();
+      fixture = TestBed.createComponent(TodayComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+      await settle();
+    }
+
+    it('renders only the configured panels', async () => {
+      await createWith(makeConfig({ teams: [makeTeamConfig()] }));
+      expect(fixture.nativeElement.querySelectorAll('app-team-panel').length).toBe(1);
+      expect(fixture.nativeElement.querySelectorAll('app-motorsport-panel').length).toBe(0);
+      expect(fixture.nativeElement.querySelectorAll('app-golf-panel').length).toBe(0);
+    });
+
+    it('renders no panels and fetches nothing for an empty config', async () => {
+      await createWith(makeConfig());
+      expect(fixture.nativeElement.querySelectorAll('app-team-panel, app-motorsport-panel, app-golf-panel').length).toBe(0);
+      expect(mockEspn.getScoreboard).not.toHaveBeenCalled();
+    });
+
+    it('fetches one scoreboard per league, shared by teams in the same league', async () => {
+      const yankees = makeTeamConfig();
+      const nats = makeTeamConfig({ espnId: '20', abbreviation: 'WSH', shortName: 'Nationals' });
+      await createWith(makeConfig({ teams: [yankees, nats] }));
+      expect(mockEspn.getScoreboard).toHaveBeenCalledTimes(1);
+      expect(mockEspn.getScoreboard).toHaveBeenCalledWith('baseball/mlb', component.date);
+    });
+
+    it('looks up games by ESPN team id', async () => {
+      await createWith(makeConfig({ teams: [makeTeamConfig({ espnId: '18', abbreviation: 'NY', sport: 'basketball/nba' })] }));
+      expect(mockEspn.findTeamGame).toHaveBeenLastCalledWith({ events: [] }, '18');
+    });
+
+    it('floats teams with a game above teams without one, keeping config order', async () => {
+      const a = makeTeamConfig({ espnId: '1', shortName: 'A' });
+      const b = makeTeamConfig({ espnId: '2', shortName: 'B' });
+      const c = makeTeamConfig({ espnId: '3', shortName: 'C' });
+      mockEspn.findTeamGame.mockImplementation((_board: unknown, id: string) => id === '2' ? makeGame() : null);
+      await createWith(makeConfig({ teams: [a, b, c] }));
+      expect(component.activeTeamPanels().map(e => e.team.shortName)).toEqual(['B']);
+      expect(component.inactiveTeamPanels().map(e => e.team.shortName)).toEqual(['A', 'C']);
+    });
   });
 });

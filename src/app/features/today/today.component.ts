@@ -1,6 +1,7 @@
 import { Component, computed, inject, resource, signal } from '@angular/core';
 import { EspnService, formatDateYMD } from '../../core/services/espn.service';
-import { MY_TEAMS, MY_SERIES, MY_GOLF } from '../../core/config/teams.config';
+import { DashboardConfigService } from '../../core/services/dashboard-config.service';
+import { fetchAll } from '../../core/utils/fetch-all';
 import { TeamPanelComponent } from '../../shared/components/team-panel/team-panel.component';
 import { MotorsportPanelComponent } from '../../shared/components/motorsport-panel/motorsport-panel.component';
 import { GolfPanelComponent } from '../../shared/components/golf-panel/golf-panel.component';
@@ -23,9 +24,7 @@ const EMPTY: EspnScoreboardResponse = { events: [] };
 })
 export class TodayComponent {
   private espn = inject(EspnService);
-  readonly teams = MY_TEAMS;
-  readonly series = MY_SERIES;
-  readonly golf = MY_GOLF[0];
+  private config = inject(DashboardConfigService).config;
 
   selectedGame       = signal<SelectedGame | null>(null);
   selectedRace       = signal<SelectedRace | null>(null);
@@ -36,81 +35,69 @@ export class TodayComponent {
     weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
   });
 
-  // ── Team sport resources ────────────────────────────────────────────
-  private nba = resource({ loader: () => this.espn.getScoreboard('basketball/nba', this.date).catch(() => EMPTY) });
-  private nfl = resource({ loader: () => this.espn.getScoreboard('football/nfl',   this.date).catch(() => EMPTY) });
-  private mlb = resource({ loader: () => this.espn.getScoreboard('baseball/mlb',   this.date).catch(() => EMPTY) });
-  private nhl = resource({ loader: () => this.espn.getScoreboard('hockey/nhl',     this.date).catch(() => EMPTY) });
+  // ── Team sport resources (one scoreboard per league in config) ──────
+  private teamBoards = resource({
+    params: () => this.config().teams.map(t => t.sport),
+    loader: ({ params }) => fetchAll(params, sport => this.espn.getScoreboard(sport, this.date), EMPTY),
+  });
 
-  private sportResource(sport: SportLeague) {
-    switch (sport) {
-      case 'basketball/nba': return this.nba;
-      case 'football/nfl':   return this.nfl;
-      case 'baseball/mlb':   return this.mlb;
-      case 'hockey/nhl':     return this.nhl;
-    }
-  }
-
-  teamData = computed(() =>
-    MY_TEAMS.map(team => ({
+  teamData = computed(() => {
+    const boards = this.teamBoards.value();
+    const isLoading = this.teamBoards.isLoading();
+    return this.config().teams.map(team => ({
       team,
-      game: this.espn.findTeamGame(this.sportResource(team.sport).value(), team.abbreviation),
-      isLoading: this.sportResource(team.sport).isLoading(),
-    }))
-  );
+      game: this.espn.findTeamGame(boards?.get(team.sport), team.espnId),
+      isLoading,
+    }));
+  });
 
-  // ── Motorsport resources (60-day future window) ─────────────────────
+  // ── Motorsport + golf resources (60-day future window) ──────────────
   private futureRange = (() => {
     const end = new Date();
     end.setDate(end.getDate() + 60);
     return `${formatDateYMD(new Date())}-${formatDateYMD(end)}`;
   })();
 
-  private f1      = resource({ loader: () => this.espn.getScoreboard('racing/f1',             this.futureRange).catch(() => EMPTY) });
-  private nascar  = resource({ loader: () => this.espn.getScoreboard('racing/nascar-premier', this.futureRange).catch(() => EMPTY) });
-  private indycar = resource({ loader: () => this.espn.getScoreboard('racing/irl',            this.futureRange).catch(() => EMPTY) });
-
-  private motorsportResource(sport: MotorsportLeague) {
-    switch (sport) {
-      case 'racing/f1':             return this.f1;
-      case 'racing/nascar-premier': return this.nascar;
-      case 'racing/irl':            return this.indycar;
-    }
-  }
-
-  seriesData = computed(() =>
-    MY_SERIES.map(s => ({
-      series: s,
-      race: this.espn.findNextRace(this.motorsportResource(s.sport).value()),
-      isLoading: this.motorsportResource(s.sport).isLoading(),
-    }))
-  );
-
-  // ── PGA Tour resource ───────────────────────────────────────────────
-  private pga = resource({
-    loader: () => this.espn.getScoreboard('golf/pga', this.futureRange).catch(() => EMPTY),
+  private seriesBoards = resource({
+    params: () => this.config().series.map(s => s.sport),
+    loader: ({ params }) => fetchAll(params, sport => this.espn.getScoreboard(sport, this.futureRange), EMPTY),
   });
 
-  pgaData = computed(() => ({
-    tournament: this.espn.findCurrentTournament(this.pga.value()),
-    isLoading: this.pga.isLoading(),
-  }));
-
-  // Base order: Yankees, Nationals, Knicks, Giants, Rangers (MY_TEAMS indices 2,3,0,1,4)
-  // After load: teams with a game float above golf+motorsports; no-game teams render below.
-  private baseTeamPanels = computed(() => {
-    const t = this.teamData();
-    return [t[2], t[3], t[0], t[1], t[4]];
+  seriesData = computed(() => {
+    const boards = this.seriesBoards.value();
+    const isLoading = this.seriesBoards.isLoading();
+    return this.config().series.map(series => ({
+      series,
+      race: this.espn.findNextRace(boards?.get(series.sport)),
+      isLoading,
+    }));
   });
 
+  private golfBoards = resource({
+    params: () => this.config().golf.map(g => g.sport),
+    loader: ({ params }) => fetchAll(params, sport => this.espn.getScoreboard(sport, this.futureRange), EMPTY),
+  });
+
+  golfData = computed(() => {
+    const boards = this.golfBoards.value();
+    const isLoading = this.golfBoards.isLoading();
+    return this.config().golf.map(series => ({
+      series,
+      tournament: this.espn.findCurrentTournament(boards?.get(series.sport)),
+      isLoading,
+    }));
+  });
+
+  // Config order is the base order. After load: teams with a game float above
+  // golf+motorsports; no-game teams render below.
   activeTeamPanels = computed(() => {
-    const base = this.baseTeamPanels();
+    const base = this.teamData();
     if (base.some(e => e.isLoading)) return base;
     return base.filter(e => e.game !== null);
   });
 
   inactiveTeamPanels = computed(() => {
-    const base = this.baseTeamPanels();
+    const base = this.teamData();
     if (base.some(e => e.isLoading)) return [];
     return base.filter(e => e.game === null);
   });

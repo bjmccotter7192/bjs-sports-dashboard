@@ -1,9 +1,10 @@
 import { Component, computed, inject, resource } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { EspnService, formatDateYMD } from '../../core/services/espn.service';
-import { MY_TEAMS, MY_SERIES, MY_GOLF } from '../../core/config/teams.config';
+import { DashboardConfigService } from '../../core/services/dashboard-config.service';
+import { fetchAll } from '../../core/utils/fetch-all';
 import { Game, Race, Tournament, EspnScoreboardResponse } from '../../core/models/game.model';
-import { TeamConfig, SeriesConfig, GolfSeriesConfig, MotorsportLeague } from '../../core/models/team-config.model';
+import { TeamConfig, SeriesConfig, GolfSeriesConfig } from '../../core/models/team-config.model';
 
 export type ScheduleItem =
   | { kind: 'game';       game: Game;             team: TeamConfig }
@@ -26,68 +27,61 @@ const EMPTY: EspnScoreboardResponse = { events: [] };
 })
 export class ScheduleComponent {
   private espn = inject(EspnService);
+  private config = inject(DashboardConfigService).config;
 
   private rangeStart = new Date();
   private rangeEnd   = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d; })();
   private motorsportDateRange = `${formatDateYMD(this.rangeStart)}-${formatDateYMD(this.rangeEnd)}`;
 
   // ── Per-team schedule resources (full season, no 100-event ESPN cap) ──
-  private knicks  = resource({ loader: () => this.espn.getTeamSchedule('basketball/nba', MY_TEAMS[0].espnId).catch(() => EMPTY) });
-  private giants  = resource({ loader: () => this.espn.getTeamSchedule('football/nfl',   MY_TEAMS[1].espnId).catch(() => EMPTY) });
-  private yankees = resource({ loader: () => this.espn.getTeamSchedule('baseball/mlb',   MY_TEAMS[2].espnId).catch(() => EMPTY) });
-  private nats    = resource({ loader: () => this.espn.getTeamSchedule('baseball/mlb',   MY_TEAMS[3].espnId).catch(() => EMPTY) });
-  private rangers = resource({ loader: () => this.espn.getTeamSchedule('hockey/nhl',     MY_TEAMS[4].espnId).catch(() => EMPTY) });
+  private teamSchedules = resource({
+    params: () => this.config().teams,
+    loader: ({ params }) => fetchAll(params, team => this.espn.getTeamSchedule(team.sport, team.espnId), EMPTY),
+  });
 
-  private teamResources = [
-    { team: MY_TEAMS[0], res: this.knicks  },
-    { team: MY_TEAMS[1], res: this.giants  },
-    { team: MY_TEAMS[2], res: this.yankees },
-    { team: MY_TEAMS[3], res: this.nats    },
-    { team: MY_TEAMS[4], res: this.rangers },
-  ];
+  // ── Motorsport + golf resources ────────────────────────────────────
+  private seriesBoards = resource({
+    params: () => this.config().series.map(s => s.sport),
+    loader: ({ params }) => fetchAll(params, sport => this.espn.getScoreboard(sport, this.motorsportDateRange), EMPTY),
+  });
 
-  // ── Motorsport resources ────────────────────────────────────────────
-  private f1      = resource({ loader: () => this.espn.getScoreboard('racing/f1',             this.motorsportDateRange).catch(() => EMPTY) });
-  private nascar  = resource({ loader: () => this.espn.getScoreboard('racing/nascar-premier', this.motorsportDateRange).catch(() => EMPTY) });
-  private indycar = resource({ loader: () => this.espn.getScoreboard('racing/irl',            this.motorsportDateRange).catch(() => EMPTY) });
-
-  // ── PGA Tour resource ───────────────────────────────────────────────
-  private pga = resource({ loader: () => this.espn.getScoreboard('golf/pga', this.motorsportDateRange).catch(() => EMPTY) });
+  private golfBoards = resource({
+    params: () => this.config().golf.map(g => g.sport),
+    loader: ({ params }) => fetchAll(params, sport => this.espn.getScoreboard(sport, this.motorsportDateRange), EMPTY),
+  });
 
   isLoading = computed(() =>
-    this.teamResources.some(r => r.res.isLoading()) ||
-    this.f1.isLoading() || this.nascar.isLoading() || this.indycar.isLoading() ||
-    this.pga.isLoading()
+    this.teamSchedules.isLoading() || this.seriesBoards.isLoading() || this.golfBoards.isLoading()
   );
 
   scheduleDays = computed((): ScheduleDay[] => {
     const items: ScheduleItem[] = [];
 
+    const { teams, series, golf } = this.config();
+
     // ── Team games (date-filtered client-side) ──
-    for (const { team, res } of this.teamResources) {
-      const games = this.espn.getGamesInDateRange(res.value(), this.rangeStart, this.rangeEnd);
+    const schedules = this.teamSchedules.value();
+    for (const team of teams) {
+      const games = this.espn.getGamesInDateRange(schedules?.get(team), this.rangeStart, this.rangeEnd);
       for (const game of games) {
         items.push({ kind: 'game', game, team });
       }
     }
 
     // ── Races ──
-    const motorsportBoards: Record<MotorsportLeague, EspnScoreboardResponse | undefined> = {
-      'racing/f1':             this.f1.value(),
-      'racing/nascar-premier': this.nascar.value(),
-      'racing/irl':            this.indycar.value(),
-    };
-
-    for (const series of MY_SERIES) {
-      const races = this.espn.getAllUpcomingRaces(motorsportBoards[series.sport]);
-      for (const race of races) {
-        items.push({ kind: 'race', race, series });
+    const seriesBoards = this.seriesBoards.value();
+    for (const s of series) {
+      for (const race of this.espn.getAllUpcomingRaces(seriesBoards?.get(s.sport))) {
+        items.push({ kind: 'race', race, series: s });
       }
     }
 
-    // ── PGA Tour tournaments ──
-    for (const tournament of this.espn.getAllUpcomingTournaments(this.pga.value())) {
-      items.push({ kind: 'tournament', tournament, series: MY_GOLF[0] });
+    // ── Golf tournaments ──
+    const golfBoards = this.golfBoards.value();
+    for (const g of golf) {
+      for (const tournament of this.espn.getAllUpcomingTournaments(golfBoards?.get(g.sport))) {
+        items.push({ kind: 'tournament', tournament, series: g });
+      }
     }
 
     // ── Group by date ──

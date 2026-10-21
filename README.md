@@ -138,12 +138,16 @@ src/
 │   │
 │   ├── core/
 │   │   ├── config/
-│   │   │   └── teams.config.ts    # MY_TEAMS, MY_SERIES, MY_GOLF definitions
+│   │   │   ├── leagues.config.ts  # LEAGUES registry (slug, kind, label, hasNews)
+│   │   │   └── teams.config.ts    # DEFAULT_CONFIG — teams, series, golf
 │   │   ├── models/
 │   │   │   ├── game.model.ts      # EspnEvent, Game, Race, Tournament interfaces
 │   │   │   └── team-config.model.ts  # TeamConfig, SeriesConfig, GolfSeriesConfig types
-│   │   └── services/
-│   │       └── espn.service.ts    # All ESPN API calls + data parsing
+│   │   ├── services/
+│   │   │   ├── dashboard-config.service.ts  # Config signal every view reads
+│   │   │   └── espn.service.ts    # All ESPN API calls + data parsing
+│   │   └── utils/
+│   │       └── fetch-all.ts       # Parallel per-key fetch with per-key fallback
 │   │
 │   ├── features/
 │   │   ├── today/                 # Today's Games view
@@ -244,14 +248,10 @@ providers: [provideZonelessChangeDetection(), ...]
 ## Adding a New Team or Series
 
 1. Open [src/app/core/config/teams.config.ts](src/app/core/config/teams.config.ts)
-2. Add an entry to `MY_TEAMS` (team sport) or `MY_SERIES` (motorsport)
-3. Find the ESPN `abbreviation` by curling the league scoreboard and inspecting a game that includes your team:
+2. Add an entry to `DEFAULT_CONFIG.teams`, `.series` (motorsport), or `.golf`. Array order is display order.
+3. For a team, find its `espnId`, `abbreviation`, and colors from the league's teams endpoint:
    ```bash
-   curl "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard" | python3 -m json.tool | grep abbreviation
-   ```
-4. Find the `espnId` from the team schedule endpoint:
-   ```bash
-   curl "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/teams" | python3 -m json.tool | grep -A2 '"shortDisplayName": "Yankees"'
+   curl -s --compressed "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/teams" | python3 -m json.tool | grep -B3 -A6 '"shortDisplayName": "Yankees"'
    ```
 
 ---

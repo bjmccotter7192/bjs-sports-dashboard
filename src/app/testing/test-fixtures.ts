@@ -13,6 +13,8 @@ export function makeEspnTeamEvent(opts: {
   id?: string;
   date?: string;
   state?: 'pre' | 'in' | 'post';
+  homeId?: string;
+  awayId?: string;
   homeAbbr?: string;
   awayAbbr?: string;
   homeScore?: string;
@@ -43,7 +45,7 @@ export function makeEspnTeamEvent(opts: {
           {
             homeAway: 'home',
             team: {
-              id: '10',
+              id: opts.homeId ?? '10',
               abbreviation: opts.homeAbbr ?? 'HME',
               displayName: `${opts.homeAbbr ?? 'HME'} Team`,
               shortDisplayName: opts.homeAbbr ?? 'HME',
@@ -57,7 +59,7 @@ export function makeEspnTeamEvent(opts: {
           {
             homeAway: 'away',
             team: {
-              id: '4',
+              id: opts.awayId ?? '4',
               abbreviation: opts.awayAbbr ?? 'AWY',
               displayName: `${opts.awayAbbr ?? 'AWY'} Team`,
               shortDisplayName: opts.awayAbbr ?? 'AWY',
@@ -129,6 +131,7 @@ export function makeEspnRaceEvent(opts: {
 // ── Normalized model fixtures ───────────────────────────────────────────────
 
 const defaultHomeTeam: GameTeam = {
+  id: '10',
   abbreviation: 'NYY',
   displayName: 'New York Yankees',
   logo: 'https://a.espncdn.com/i/teamlogos/mlb/500/nyy.png',
@@ -138,6 +141,7 @@ const defaultHomeTeam: GameTeam = {
 };
 
 const defaultAwayTeam: GameTeam = {
+  id: '4',
   abbreviation: 'CHW',
   displayName: 'Chicago White Sox',
   logo: 'https://a.espncdn.com/i/teamlogos/mlb/500/chw.png',

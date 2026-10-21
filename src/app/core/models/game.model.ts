@@ -83,6 +83,7 @@ export interface StatCategory {
 
 // Normalized team-sport game model
 export interface GameTeam {
+  id: string;
   abbreviation: string;
   displayName: string;
   logo: string;

@@ -6,7 +6,7 @@
 </div>
 
 <div class="filter-bar">
-  @for (src of filterSources; track src.key) {
+  @for (src of filterSources(); track src.key) {
     <button
       class="filter-btn"
       [class.active]="selectedFilter() === src.key"

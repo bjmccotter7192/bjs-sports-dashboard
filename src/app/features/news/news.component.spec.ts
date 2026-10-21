@@ -6,6 +6,8 @@ import { NewsComponent } from './news.component';
 import { EspnService } from '../../core/services/espn.service';
 import { createMockEspnService } from '../../testing/mock-espn.service';
 import { NewsArticle } from '../../core/models/game.model';
+import { DEFAULT_CONFIG } from '../../core/config/teams.config';
+import { provideDashboardConfig, makeConfig, makeTeamConfig } from '../../testing/dashboard-config';
 
 function makeArticle(overrides: Partial<NewsArticle> = {}): NewsArticle {
   return {
@@ -220,5 +222,43 @@ describe('NewsComponent', () => {
   it('timeAgo returns hours for same-day dates', () => {
     const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000);
     expect(component.timeAgo(threeHoursAgo)).toBe('3h ago');
+  });
+
+  // ── Custom config ───────────────────────────────────────────────────────────
+
+  describe('with a custom config', () => {
+    async function createWith(config: ReturnType<typeof makeConfig>) {
+      TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [NewsComponent],
+        providers: [
+          provideZonelessChangeDetection(),
+          provideRouter([]),
+          { provide: EspnService, useValue: mockEspn },
+          provideDashboardConfig(config),
+        ],
+      }).compileComponents();
+      fixture = TestBed.createComponent(NewsComponent);
+      component = fixture.componentInstance;
+      fixture.detectChanges();
+      await settle();
+    }
+
+    it('only offers sources for leagues in the config, colored by the first team', async () => {
+      const yankees = makeTeamConfig({ primaryColor: '#003087' });
+      const nats = makeTeamConfig({ espnId: '20', primaryColor: '#AB0003' });
+      await createWith(makeConfig({ teams: [yankees, nats] }));
+      expect(component.filterSources().map(s => s.label)).toEqual(['All', 'MLB']);
+      expect(component.filterSources()[1].color).toBe('#003087');
+      expect(mockEspn.getNews).toHaveBeenCalledTimes(1);
+      expect(mockEspn.getNews).toHaveBeenCalledWith('baseball/mlb', 'MLB', '#003087');
+    });
+
+    it('skips leagues without news (NASCAR)', async () => {
+      await createWith(makeConfig({ series: [{ ...DEFAULT_CONFIG.series[1] }] }));
+      expect(DEFAULT_CONFIG.series[1].sport).toBe('racing/nascar-premier');
+      expect(component.filterSources().map(s => s.label)).toEqual(['All']);
+      expect(mockEspn.getNews).not.toHaveBeenCalled();
+    });
   });
 });

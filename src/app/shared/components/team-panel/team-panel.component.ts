@@ -2,13 +2,7 @@ import { Component, computed, input, output } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { TeamConfig, SportLeague } from '../../../core/models/team-config.model';
 import { Game } from '../../../core/models/game.model';
-
-const SPORT_LABELS: Record<SportLeague, string> = {
-  'basketball/nba': 'NBA',
-  'football/nfl': 'NFL',
-  'baseball/mlb': 'MLB',
-  'hockey/nhl': 'NHL',
-};
+import { leagueLabel } from '../../../core/config/leagues.config';
 
 @Component({
   selector: 'app-team-panel',
@@ -32,7 +26,7 @@ export class TeamPanelComponent {
 
   isClickable = computed(() => !!this.game() && (this.isLive() || this.isPost()));
 
-  sportLabel = computed(() => SPORT_LABELS[this.team().sport]);
+  sportLabel = computed(() => leagueLabel(this.team().sport));
 
   periodLabel = computed(() => {
     switch (this.team().sport) {
@@ -51,7 +45,7 @@ export class TeamPanelComponent {
   myTeamSide = computed(() => {
     const g = this.game();
     if (!g) return null;
-    return g.homeTeam.abbreviation === this.team().abbreviation ? 'home' : 'away';
+    return g.homeTeam.id === this.team().espnId ? 'home' : 'away';
   });
 
   myTeam = computed(() => {
