@@ -35,37 +35,20 @@ export class YesterdayComponent {
     d.setDate(d.getDate() - 14);
     return d;
   })();
-  // MLB scoreboard caps at 100 events (~15 games/day = ~6 days max).
-  // Use a 6-day window so yesterday's games are always included.
-  private mlbWindowStart = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 6);
-    return d;
-  })();
+  readonly dateRange = `${formatDateYMD(this.windowStart)}-${formatDateYMD(this.windowEnd)}`;
 
-  readonly dateRange    = `${formatDateYMD(this.windowStart)}-${formatDateYMD(this.windowEnd)}`;
-  readonly mlbDateRange = `${formatDateYMD(this.mlbWindowStart)}-${formatDateYMD(this.windowEnd)}`;
-
-  // ── Team sport resources (14-day window) ───────────────────────────
-  private nba = resource({ loader: () => this.espn.getScoreboard('basketball/nba', this.dateRange).catch(() => EMPTY) });
-  private nfl = resource({ loader: () => this.espn.getScoreboard('football/nfl',   this.dateRange).catch(() => EMPTY) });
-  private mlb = resource({ loader: () => this.espn.getScoreboard('baseball/mlb',   this.mlbDateRange).catch(() => EMPTY) });
-  private nhl = resource({ loader: () => this.espn.getScoreboard('hockey/nhl',     this.dateRange).catch(() => EMPTY) });
-
-  private sportResource(sport: SportLeague) {
-    switch (sport) {
-      case 'basketball/nba': return this.nba;
-      case 'football/nfl':   return this.nfl;
-      case 'baseball/mlb':   return this.mlb;
-      case 'hockey/nhl':     return this.nhl;
-    }
-  }
+  // ── Team sport resources (per-team season schedule, 14-day cutoff) ──
+  // League scoreboards (NBA/NFL/MLB/NHL) return HTTP 400 for date ranges, so use the
+  // per-team schedule endpoint instead — it also avoids the 100-event scoreboard cap.
+  private teamResources = MY_TEAMS.map(team =>
+    resource({ loader: () => this.espn.getTeamSchedule(team.sport, team.espnId).catch(() => EMPTY) })
+  );
 
   teamData = computed(() =>
-    MY_TEAMS.map(team => ({
+    MY_TEAMS.map((team, i) => ({
       team,
-      game: this.espn.findLastPlayedGame(this.sportResource(team.sport).value(), team.abbreviation),
-      isLoading: this.sportResource(team.sport).isLoading(),
+      game: this.espn.findLastPlayedGame(this.teamResources[i].value(), team.abbreviation, this.windowStart),
+      isLoading: this.teamResources[i].isLoading(),
     }))
   );
 
