@@ -14,6 +14,8 @@ export interface EspnCompetitor {
   team?: EspnTeam;
   score?: string;
   winner?: boolean;
+  /** Season record splits (scoreboard only; the team schedule endpoint omits them). */
+  records?: Array<{ type?: string; summary?: string }>;
   // motorsports fields
   order?: number;
   athlete?: { displayName: string; shortName: string };
@@ -90,6 +92,8 @@ export interface GameTeam {
   score: string;
   isWinner: boolean;
   primaryColor: string;
+  /** Overall record, e.g. '6-1' or '8-7-2' (NHL). Absent when ESPN doesn't send one. */
+  record?: string;
 }
 
 export interface Game {

@@ -41,6 +41,9 @@
             loading="lazy"
           />
           <span class="team-abbr">{{ myTeam()?.abbreviation }}</span>
+          @if (myTeam()?.record; as record) {
+            <span class="team-record">{{ record }}</span>
+          }
           @if (showScore()) {
             <span class="score my-score">{{ myTeam()?.score }}</span>
           }
@@ -63,6 +66,9 @@
         <div class="team-side opp-team" [class.winner]="opponent()?.isWinner && game()?.status?.state === 'post'">
           @if (showScore()) {
             <span class="score opp-score">{{ opponent()?.score }}</span>
+          }
+          @if (opponent()?.record; as record) {
+            <span class="team-record">{{ record }}</span>
           }
           <span class="team-abbr">{{ opponent()?.abbreviation }}</span>
           <img

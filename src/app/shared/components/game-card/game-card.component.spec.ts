@@ -33,6 +33,13 @@ describe('GameCardComponent', () => {
     expect(el().querySelector('.status')?.textContent).toContain('Final');
   });
 
+  it("shows each team's record when ESPN provides one", () => {
+    render(makeGame({ homeTeam: { ...makeGame().homeTeam, record: '93-68' } }));
+    const rows = el().querySelectorAll('.team-row');
+    expect(rows[0].querySelector('.record')).toBeNull();
+    expect(rows[1].querySelector('.record')?.textContent).toBe('93-68');
+  });
+
   it('dims the loser of a finished game but neither side of a draw', () => {
     render(makeGame());
     expect(el().querySelectorAll('.team-row')[0].classList.contains('loser')).toBe(true);

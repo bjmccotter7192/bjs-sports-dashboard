@@ -17,6 +17,9 @@
       }
       <span class="abbr">{{ team.abbreviation }}</span>
       <span class="name">{{ team.displayName }}</span>
+      @if (team.record) {
+        <span class="record">{{ team.record }}</span>
+      }
       @if (!isPre()) {
         <span class="score">{{ team.score }}</span>
       }

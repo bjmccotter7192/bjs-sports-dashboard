@@ -22,6 +22,7 @@ export function makeEspnTeamEvent(opts: {
   homeWinner?: boolean;
   venue?: string;
   broadcast?: string;
+  homeRecords?: Array<{ type?: string; summary?: string }>;
 } = {}): EspnEvent {
   const state = opts.state ?? 'pre';
   return {
@@ -55,6 +56,7 @@ export function makeEspnTeamEvent(opts: {
             },
             score: opts.homeScore ?? '',
             winner: opts.homeWinner,
+            records: opts.homeRecords,
           },
           {
             homeAway: 'away',
