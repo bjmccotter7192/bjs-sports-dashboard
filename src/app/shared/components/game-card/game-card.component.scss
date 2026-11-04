@@ -64,6 +64,13 @@
     white-space: nowrap;
   }
 
+  .record {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
   .score {
     font-size: 1.1rem;
     font-weight: 700;

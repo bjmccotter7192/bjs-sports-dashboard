@@ -13,7 +13,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { EspnService, formatDateYMD, sortStandingsRows } from './espn.service';
+import { EspnService, formatDateYMD, overallRecord, sortStandingsRows } from './espn.service';
 import { StandingsRow } from '../models/standings.model';
 import { EspnEvent, EspnScoreboardResponse } from '../models/game.model';
 import { makeEspnTeamEvent, makeEspnRaceEvent } from '../../testing/test-fixtures';
@@ -440,6 +440,20 @@ describe('EspnService', () => {
 
   // ── parseGame ────────────────────────────────────────────────────────────
 
+  describe('overallRecord', () => {
+    it("reads 'total', or the NHL's 'ytd'", () => {
+      expect(overallRecord([{ type: 'total', summary: '6-1' }])).toBe('6-1');
+      expect(overallRecord([{ type: 'home', summary: '4-4-1' }, { type: 'ytd', summary: '8-7-2' }])).toBe('8-7-2');
+    });
+
+    it('ignores missing, split-only, or non-record summaries', () => {
+      expect(overallRecord(undefined)).toBeUndefined();
+      expect(overallRecord([{ type: 'home', summary: '2-0' }])).toBeUndefined();
+      expect(overallRecord([{ type: 'total', summary: '<b>6-1</b>' }])).toBeUndefined();
+      expect(overallRecord([{ type: 'total', summary: '6' }])).toBeUndefined();
+    });
+  });
+
   describe('parseGame', () => {
     it('correctly separates home and away teams', () => {
       const game = service.parseGame(makeEspnTeamEvent({ homeAbbr: 'NYY', awayAbbr: 'CHW' }));
@@ -454,6 +468,14 @@ describe('EspnService', () => {
       expect(game.homeTeam.score).toBe('5');
       expect(game.homeTeam.isWinner).toBe(true);
       expect(game.awayTeam.isWinner).toBe(false);
+    });
+
+    it("maps each team's overall record when the scoreboard has one", () => {
+      const game = service.parseGame(makeEspnTeamEvent({
+        homeRecords: [{ type: 'home', summary: '2-0' }, { type: 'total', summary: '6-1' }],
+      }));
+      expect(game.homeTeam.record).toBe('6-1');
+      expect(game.awayTeam.record).toBeUndefined();
     });
 
     it('maps venue and broadcast', () => {

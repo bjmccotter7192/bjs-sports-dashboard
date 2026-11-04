@@ -235,6 +235,26 @@ describe('TeamPanelComponent', () => {
     expect(oppAbbr).toBe('BOS');
   });
 
+  it("shows both teams' records under their abbreviations when present", () => {
+    const base = makeGame();
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({
+      homeTeam: { ...base.homeTeam, id: '18', record: '6-1' },
+      awayTeam: { ...base.awayTeam, record: '3-4' },
+    }));
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.my-team .team-record')?.textContent).toBe('6-1');
+    expect(el.querySelector('.opp-team .team-record')?.textContent).toBe('3-4');
+  });
+
+  it('omits the record line when ESPN sends none (team schedule data)', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({ homeTeam: { ...makeGame().homeTeam, id: '18' } }));
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.team-record')).toBeNull();
+  });
+
   // ── periodLabel ──────────────────────────────────────────────────────────
 
   // Demonstrates: periodLabel returns sport-specific suffix for in-game period display.

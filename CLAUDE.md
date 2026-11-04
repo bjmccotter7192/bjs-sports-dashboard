@@ -56,7 +56,7 @@ ng build                                          # production build → dist/
 | `src/app/features/news/` | News feed, one source per configured league with `hasNews` (NASCAR has none). Filterable by league. |
 | `src/app/features/league/` | `#/league/:code?date=YYYYMMDD`: every game in one team league for one ESPN game day. Smart default day, ‹ › day paging, user's teams starred and listed first, box score on click, 30s live refresh. `?tab=standings` swaps in `LeagueStandingsComponent` (`league-standings/`). |
 | `src/app/core/config/standings.config.ts` | `STANDINGS_FORMATS`: per team league grouping (`level`), row sort, and columns (ESPN stat `type`s). |
-| `src/app/shared/components/game-card/` | Compact two-row scoreboard card used by league pages. Inputs: `game`, `sport`, `zone`, `starred`. |
+| `src/app/shared/components/game-card/` | Compact two-row scoreboard card used by league pages. Inputs: `game`, `sport`, `zone`, `starred`. Shows each team's record when `GameTeam.record` is set. |
 | `src/app/features/settings/` | Team picker (from ESPN `/teams`), reorder/remove, series + golf toggles, share link, reset. Changes save immediately. |
 | `src/app/features/import/` | Applies a share link: decodes ids, resolves names from ESPN, previews, replaces config on confirm. |
 | `src/app/shared/components/empty-config/` | "Pick your teams" prompt shown by every view when the config is empty. |
@@ -116,6 +116,9 @@ Known **no CORS**: `/{sport}/teams` and `/{sport}/teams/{id}`. So `getTeams()` r
 - Stat types differ by league: CFB uses `homerecord`/`awayrecord`, everyone else `home`/`road`.
 - `?level=3` returns divisions (NFL, MLB, NHL use it). MLB `playoffseed` is league-wide and doesn't follow division order, so MLB sorts by `gamesbehind` then `winpercent`.
 - College payloads are ~6 MB raw (~140 KB gzipped).
+
+### Team records
+Scoreboard competitors carry `records[]` splits. `overallRecord()` takes `type: 'total'` (`'ytd'` for the NHL) and accepts only plain `W-L` / `W-L-T` summaries, which become `GameTeam.record`. NHL is W-L-OTL and soccer is W-D-L. The team schedule endpoint has **no** competitor records, so Last Played and Schedule cards show none. Leagues can send none at all (NWSL in its postseason), and the cards then just omit the record.
 
 ### Team schedule score shape
 The team schedule endpoint returns `competitor.score` as `{ value, displayValue }`, not a string. `normalizeTeamScheduleEvent()` flattens it to `displayValue`.

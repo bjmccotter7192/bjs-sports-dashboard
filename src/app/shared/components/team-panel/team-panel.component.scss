@@ -175,6 +175,13 @@
     letter-spacing: 0.05em;
   }
 
+  .team-record {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+    margin-top: -0.2rem;
+  }
+
   .score {
     font-size: 2rem;
     font-weight: 900;

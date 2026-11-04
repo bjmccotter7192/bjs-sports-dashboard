@@ -354,6 +354,7 @@ export class EspnService {
   }
 
   private parseTeam(competitor: EspnCompetitor): GameTeam {
+    const record = overallRecord(competitor.records);
     return {
       id: competitor.team?.id ?? '',
       abbreviation: competitor.team?.abbreviation ?? '',
@@ -362,6 +363,7 @@ export class EspnService {
       score: competitor.score ?? '',
       isWinner: competitor.winner ?? false,
       primaryColor: competitor.team?.color ? `#${competitor.team.color}` : '#666',
+      ...(record ? { record } : {}),
     };
   }
 
@@ -661,6 +663,17 @@ export class EspnService {
       sourceColor,
     };
   }
+}
+
+/**
+ * The overall record from a scoreboard competitor's `records`. Most leagues label it
+ * `type: 'total'`; the NHL uses `'ytd'`. Only plain W-L(-T/OTL) summaries are accepted.
+ */
+export function overallRecord(records: EspnCompetitor['records']): string | undefined {
+  if (!Array.isArray(records)) return undefined;
+  const overall = records.find(r => r?.type === 'total' || r?.type === 'ytd');
+  const summary = overall?.summary;
+  return typeof summary === 'string' && /^\d+(-\d+){1,2}$/.test(summary) ? summary : undefined;
 }
 
 /** Stable multi-key sort. Rows missing a sort stat go after rows that have it. */
