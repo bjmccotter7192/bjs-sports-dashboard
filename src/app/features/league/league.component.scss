@@ -108,3 +108,28 @@
   font-size: 0.75rem;
   color: var(--text-muted);
 }
+
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+
+  .tab {
+    padding: 0.5rem 0.9rem;
+    margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--text-primary);
+    }
+
+    &.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--text-primary);
+    }
+  }
+}

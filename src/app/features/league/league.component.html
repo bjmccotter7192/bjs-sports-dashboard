@@ -9,51 +9,62 @@
   <div class="view-header">
     <div class="header-text">
       <h1 class="view-title">{{ league()!.label }}</h1>
-      <span class="view-date">Every game, every day</span>
+      <span class="view-date">{{ tab() === 'standings' ? 'Where every team stands' : 'Every game, every day' }}</span>
     </div>
     @if (hasLive()) {
       <span class="live-pill" title="Updates every 30 seconds"><span class="live-dot"></span>Live</span>
     }
   </div>
 
-  <div class="day-nav">
-    <button class="nav-btn" (click)="prevDay()" aria-label="Previous day">‹</button>
-    <span class="day-label">{{ dateLabel() }}</span>
-    <button class="nav-btn" (click)="nextDay()" aria-label="Next day">›</button>
-    <button class="nav-btn today-btn" (click)="today()" [disabled]="isToday()">Today</button>
-  </div>
+  <nav class="tabs" aria-label="{{ league()!.label }} views">
+    <a class="tab" [routerLink]="[]" [queryParams]="{ tab: null }" queryParamsHandling="merge"
+       [class.active]="tab() === 'scores'" [attr.aria-current]="tab() === 'scores' ? 'page' : null">Scores</a>
+    <a class="tab" [routerLink]="[]" [queryParams]="{ tab: 'standings' }" queryParamsHandling="merge"
+       [class.active]="tab() === 'standings'" [attr.aria-current]="tab() === 'standings' ? 'page' : null">Standings</a>
+  </nav>
 
-  @if (isFirstLoad()) {
-    <div class="games-grid">
-      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
-        <div class="skeleton-card"></div>
-      }
-    </div>
-  } @else if (board.error()) {
-    <div class="empty-state">
-      <p>Couldn't load {{ league()!.label }} scores from ESPN. Try again later.</p>
-    </div>
-  } @else if (!games().length) {
-    <div class="empty-state">
-      <span class="empty-icon">📅</span>
-      <p>No {{ league()!.label }} games on {{ dateLabel() }}.</p>
-    </div>
+  @if (tab() === 'standings') {
+    <app-league-standings [sport]="sport()!" [label]="league()!.label" />
   } @else {
-    <div class="games-grid">
-      @for (entry of games(); track entry.game.id) {
-        <app-game-card
-          [game]="entry.game"
-          [sport]="sport()!"
-          [zone]="zone()"
-          [starred]="entry.starred"
-          (cardClick)="selectedGame.set($event)"
-        />
-      }
+    <div class="day-nav">
+      <button class="nav-btn" (click)="prevDay()" aria-label="Previous day">‹</button>
+      <span class="day-label">{{ dateLabel() }}</span>
+      <button class="nav-btn" (click)="nextDay()" aria-label="Next day">›</button>
+      <button class="nav-btn today-btn" (click)="today()" [disabled]="isToday()">Today</button>
     </div>
-    <p class="updated">
-      {{ games().length }} game{{ games().length === 1 ? '' : 's' }}
-      @if (hasLive()) { · live scores refresh every 30s }
-    </p>
+
+    @if (isFirstLoad()) {
+      <div class="games-grid">
+        @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+          <div class="skeleton-card"></div>
+        }
+      </div>
+    } @else if (board.error()) {
+      <div class="empty-state">
+        <p>Couldn't load {{ league()!.label }} scores from ESPN. Try again later.</p>
+      </div>
+    } @else if (!games().length) {
+      <div class="empty-state">
+        <span class="empty-icon">📅</span>
+        <p>No {{ league()!.label }} games on {{ dateLabel() }}.</p>
+      </div>
+    } @else {
+      <div class="games-grid">
+        @for (entry of games(); track entry.game.id) {
+          <app-game-card
+            [game]="entry.game"
+            [sport]="sport()!"
+            [zone]="zone()"
+            [starred]="entry.starred"
+            (cardClick)="selectedGame.set($event)"
+          />
+        }
+      </div>
+      <p class="updated">
+        {{ games().length }} game{{ games().length === 1 ? '' : 's' }}
+        @if (hasLive()) { · live scores refresh every 30s }
+      </p>
+    }
   }
 
   @if (selectedGame()) {

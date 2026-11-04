@@ -54,7 +54,8 @@ ng build                                          # production build → dist/
 | `src/app/features/yesterday/` | Last Played — most recent completed game per team in last 14 days. Same dynamic ordering. |
 | `src/app/features/schedule/` | Next 30 days, grouped by date |
 | `src/app/features/news/` | News feed, one source per configured league with `hasNews` (NASCAR has none). Filterable by league. |
-| `src/app/features/league/` | `#/league/:code?date=YYYYMMDD`: every game in one team league for one ESPN game day. Smart default day, ‹ › day paging, user's teams starred and listed first, box score on click, 30s live refresh. |
+| `src/app/features/league/` | `#/league/:code?date=YYYYMMDD`: every game in one team league for one ESPN game day. Smart default day, ‹ › day paging, user's teams starred and listed first, box score on click, 30s live refresh. `?tab=standings` swaps in `LeagueStandingsComponent` (`league-standings/`). |
+| `src/app/core/config/standings.config.ts` | `STANDINGS_FORMATS`: per team league grouping (`level`), row sort, and columns (ESPN stat `type`s). |
 | `src/app/shared/components/game-card/` | Compact two-row scoreboard card used by league pages. Inputs: `game`, `sport`, `zone`, `starred`. |
 | `src/app/features/settings/` | Team picker (from ESPN `/teams`), reorder/remove, series + golf toggles, share link, reset. Changes save immediately. |
 | `src/app/features/import/` | Applies a share link: decodes ids, resolves names from ESPN, previews, replaces config on confirm. |
@@ -83,6 +84,7 @@ golf/pga
 - URL codes are `leagueRouteKey(slug)` (lowercased label: `nba`, `epl`, `ncaam`). Only team leagues have pages. Racing and golf return "League not found" for now.
 - With no `?date=`, the page opens today but switches to yesterday (`replaceUrl`) if today has no games, or if nothing has started and the first game is more than 2h away. An explicit `?date=` is never overridden.
 - While any game on the page has `state === 'in'`, `board.reload()` runs every `LIVE_REFRESH_MS` (30s). It pauses while `document.hidden` and reloads immediately when the tab becomes visible again. Skeletons show only on first load (`!hasValue()`), so refreshes don't flash.
+- **Standings tab** (`?tab=standings`) reads `/apis/v2/.../standings` via `getStandings()`. The scoreboard isn't fetched on that tab, so the smart default stays idle. Groups holding the user's teams come first.
 - The navbar **Leagues ▾** dropdown lists `followedTeamLeagues` only and is hidden when the user follows no teams.
 
 ### Per-league quirks (handled by `LEAGUES` fields)
@@ -106,6 +108,14 @@ This is a browser-only app, so an endpoint is usable only if it sends `Access-Co
 curl -s -o /dev/null -D - -H "Origin: http://localhost:4200" "<url>" | grep -i access-control-allow-origin
 ```
 Known **no CORS**: `/{sport}/teams` and `/{sport}/teams/{id}`. So `getTeams()` reads standings (`https://site.api.espn.com/apis/v2/sports/{sport}/standings`, note `/apis/v2` and not `/apis/site/v2`). That gives the full team list with no colors. `getTeamColors()` reads `/{sport}/teams/{id}/schedule` (top-level `team.color`). `/groups` also has CORS, but it's empty for WNBA and soccer and capped at 25 per division for college, so don't use it for team lists. Known OK: scoreboard, `teams/{id}/schedule`, groups, standings, summary, news.
+
+### Standings shape
+`/apis/v2/sports/{sport}/standings` nests conference → division → `standings.entries[]`. Notes for `getStandings()`:
+- **Entries aren't in standings order** (NBA comes back worst-first). Rows are re-sorted per `STANDINGS_FORMATS.sort`.
+- **Stats are keyed by `type`, not `name`.** College payloads repeat each `name` for home/away/conf splits with prefixed types (`homerecord_wins`). Only types without `_` are kept.
+- Stat types differ by league: CFB uses `homerecord`/`awayrecord`, everyone else `home`/`road`.
+- `?level=3` returns divisions (NFL, MLB, NHL use it). MLB `playoffseed` is league-wide and doesn't follow division order, so MLB sorts by `gamesbehind` then `winpercent`.
+- College payloads are ~6 MB raw (~140 KB gzipped).
 
 ### Team schedule score shape
 The team schedule endpoint returns `competitor.score` as `{ value, displayValue }`, not a string. `normalizeTeamScheduleEvent()` flattens it to `displayValue`.

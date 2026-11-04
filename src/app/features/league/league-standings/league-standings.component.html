@@ -1,0 +1,56 @@
+@if (standings.isLoading() && !standings.hasValue()) {
+  <div class="skeleton-table"></div>
+} @else if (standings.error()) {
+  <div class="empty-state">
+    <p>Couldn't load {{ label() }} standings from ESPN. Try again later.</p>
+  </div>
+} @else if (!groups().length) {
+  <div class="empty-state">
+    <span class="empty-icon">📊</span>
+    <p>No {{ label() }} standings available right now.</p>
+  </div>
+} @else {
+  @for (group of groups(); track group.name) {
+    <section class="standings-group">
+      <h2 class="group-name">{{ group.name }}</h2>
+      <div class="table-scroll">
+        <table class="standings-table">
+          <thead>
+            <tr>
+              <th class="rank" scope="col">#</th>
+              <th class="team" scope="col">Team</th>
+              @for (col of columns(); track col.type) {
+                <th scope="col" [attr.title]="col.title ?? null">{{ col.label }}</th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of group.rows; track entry.row.teamId; let i = $index) {
+              <tr [class.starred]="entry.starred">
+                <td class="rank">{{ i + 1 }}</td>
+                <th class="team" scope="row">
+                  <span class="team-cell">
+                    @if (entry.row.logo) {
+                      <img class="logo" [src]="entry.row.logo" alt="" loading="lazy" />
+                    }
+                    <span class="team-name">{{ entry.row.name }}</span>
+                    <span class="team-abbr">{{ entry.row.abbreviation }}</span>
+                    @if (entry.row.stats['clincher']?.display; as clinch) {
+                      <span class="clinch" title="Clinch status">{{ clinch }}</span>
+                    }
+                    @if (entry.starred) {
+                      <span class="star" aria-label="Your team">★</span>
+                    }
+                  </span>
+                </th>
+                @for (col of columns(); track col.type) {
+                  <td>{{ entry.row.stats[col.type]?.display || '–' }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+}

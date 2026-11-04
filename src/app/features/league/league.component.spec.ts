@@ -39,9 +39,9 @@ describe('LeagueComponent', () => {
     fixture.detectChanges();
   }
 
-  async function create(league: string, date?: string, config = makeConfig()) {
+  async function create(league: string, date?: string, config = makeConfig(), tab?: string) {
     params = new BehaviorSubject(convertToParamMap({ league }));
-    query = new BehaviorSubject(convertToParamMap(date ? { date } : {}));
+    query = new BehaviorSubject(convertToParamMap({ ...(date ? { date } : {}), ...(tab ? { tab } : {}) }));
     await TestBed.configureTestingModule({
       imports: [LeagueComponent],
       providers: [
@@ -176,6 +176,27 @@ describe('LeagueComponent', () => {
     mockEspn.getScoreboard.mockRejectedValue(new Error('500'));
     await create('nba', '20261020');
     expect(el().textContent).toContain("Couldn't load NBA scores");
+  });
+
+  // ── Tabs ────────────────────────────────────────────────────────────────────
+
+  it('opens on the Scores tab', async () => {
+    serve([live('g1')]);
+    await create('nba', '20261020');
+    expect(component.tab()).toBe('scores');
+    expect(el().querySelector('.tab.active')?.textContent).toContain('Scores');
+    expect(el().querySelector('app-league-standings')).toBeNull();
+  });
+
+  it('shows standings for ?tab=standings without fetching scores or applying the smart default', async () => {
+    await create('nhl', undefined, makeConfig(), 'standings');
+    expect(component.tab()).toBe('standings');
+    expect(el().querySelector('.tab.active')?.textContent).toContain('Standings');
+    expect(el().querySelector('app-league-standings')).not.toBeNull();
+    expect(el().querySelector('.day-nav')).toBeNull();
+    expect(mockEspn.getScoreboard).not.toHaveBeenCalled();
+    expect(mockEspn.getStandings).toHaveBeenCalledWith('hockey/nhl');
+    expect(navigate).not.toHaveBeenCalled();
   });
 
   // ── Live refresh ────────────────────────────────────────────────────────────
