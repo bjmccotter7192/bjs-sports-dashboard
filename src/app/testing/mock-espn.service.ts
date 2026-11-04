@@ -30,6 +30,7 @@ export function createMockEspnService(): MockEspnService {
     getNews: vi.fn().mockResolvedValue([]),
     getTeams: vi.fn().mockResolvedValue([]),
     getStandings: vi.fn().mockResolvedValue([]),
+    getTeamRecords: vi.fn().mockResolvedValue(new Map()),
     getTeamColors: vi.fn().mockResolvedValue({ primaryColor: '#123456', secondaryColor: '#abcdef' }),
 
     // ── Synchronous helpers — return null / empty by default ──

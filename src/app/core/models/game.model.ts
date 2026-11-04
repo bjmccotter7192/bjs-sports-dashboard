@@ -14,8 +14,13 @@ export interface EspnCompetitor {
   team?: EspnTeam;
   score?: string;
   winner?: boolean;
-  /** Season record splits (scoreboard only; the team schedule endpoint omits them). */
+  /**
+   * Season record splits. The scoreboard sends current records; the team schedule sends
+   * each past game's record as of that game (and none for upcoming games).
+   */
   records?: Array<{ type?: string; summary?: string }>;
+  /** Poll rank (AP Top 25 for college). 99 means unranked. */
+  curatedRank?: { current?: number };
   // motorsports fields
   order?: number;
   athlete?: { displayName: string; shortName: string };
@@ -94,6 +99,8 @@ export interface GameTeam {
   primaryColor: string;
   /** Overall record, e.g. '6-1' or '8-7-2' (NHL). Absent when ESPN doesn't send one. */
   record?: string;
+  /** Top-25 poll rank (college). Absent when unranked or the league has no poll. */
+  rank?: number;
 }
 
 export interface Game {

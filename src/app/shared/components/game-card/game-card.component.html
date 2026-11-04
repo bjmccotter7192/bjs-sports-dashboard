@@ -15,7 +15,7 @@
       } @else {
         <span class="logo placeholder"></span>
       }
-      <span class="abbr">{{ team.abbreviation }}</span>
+      <span class="abbr">@if (team.rank) {<span class="rank">{{ team.rank }}</span>}{{ team.abbreviation }}</span>
       <span class="name">{{ team.displayName }}</span>
       @if (team.record) {
         <span class="record">{{ team.record }}</span>

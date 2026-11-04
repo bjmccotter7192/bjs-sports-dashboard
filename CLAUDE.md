@@ -117,8 +117,12 @@ Known **no CORS**: `/{sport}/teams` and `/{sport}/teams/{id}`. So `getTeams()` r
 - `?level=3` returns divisions (NFL, MLB, NHL use it). MLB `playoffseed` is league-wide and doesn't follow division order, so MLB sorts by `gamesbehind` then `winpercent`.
 - College payloads are ~6 MB raw (~140 KB gzipped).
 
-### Team records
-Scoreboard competitors carry `records[]` splits. `overallRecord()` takes `type: 'total'` (`'ytd'` for the NHL) and accepts only plain `W-L` / `W-L-T` summaries, which become `GameTeam.record`. NHL is W-L-OTL and soccer is W-D-L. The team schedule endpoint has **no** competitor records, so Last Played and Schedule cards show none. Leagues can send none at all (NWSL in its postseason), and the cards then just omit the record.
+### Team records and poll ranks
+- **Scoreboard** competitors carry `records[]` (`summary`). **Team schedule** competitors carry `record[]` (`displayValue`) on past games only, as of that game. `normalizeTeamScheduleEvent()` maps the schedule shape onto the scoreboard one, so `parseGame()` handles both.
+- `overallRecord()` takes `type: 'total'` (`'ytd'` for the NHL). `parseRecord()` accepts only plain `W-L` / `W-L-T` and drops the NHL's `, 26 PTS` suffix. NHL is W-L-OTL and soccer is W-D-L.
+- Upcoming schedule games have no records. The Schedule view fills them from standings via `getTeamRecords(sport)` (one request per league) and `withRecords()`. That resource doesn't gate `isLoading`, and a failure just leaves records off.
+- Leagues can send no records at all (NWSL in its postseason), and cards then omit them.
+- **Poll rank:** `curatedRank.current` is on both scoreboard and schedule competitors. 99 means unranked. `pollRank()` keeps 1–25 as `GameTeam.rank`, so in practice only college teams show one.
 
 ### Team schedule score shape
 The team schedule endpoint returns `competitor.score` as `{ value, displayValue }`, not a string. `normalizeTeamScheduleEvent()` flattens it to `displayValue`.

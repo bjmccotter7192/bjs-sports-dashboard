@@ -166,6 +166,18 @@
       font-size: 0.875rem;
       font-weight: 600;
       color: var(--text-secondary);
+
+      .rank {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .record {
+        font-size: 0.72rem;
+        font-weight: 400;
+        font-variant-numeric: tabular-nums;
+      }
     }
   }
 

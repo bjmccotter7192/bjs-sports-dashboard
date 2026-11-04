@@ -49,7 +49,13 @@
                 <div class="game-matchup">
                   <img [src]="item.game.awayTeam.logo" [alt]="item.game.awayTeam.abbreviation" class="mini-logo" />
                   <span class="matchup-text">
-                    {{ item.game.awayTeam.abbreviation }} @ {{ item.game.homeTeam.abbreviation }}
+                    @if (item.game.awayTeam.rank) { <span class="rank">#{{ item.game.awayTeam.rank }}</span> }
+                    {{ item.game.awayTeam.abbreviation }}
+                    @if (item.game.awayTeam.record) { <span class="record away-record">{{ item.game.awayTeam.record }}</span> }
+                    &#64;
+                    @if (item.game.homeTeam.rank) { <span class="rank">#{{ item.game.homeTeam.rank }}</span> }
+                    {{ item.game.homeTeam.abbreviation }}
+                    @if (item.game.homeTeam.record) { <span class="record home-record">{{ item.game.homeTeam.record }}</span> }
                   </span>
                   <img [src]="item.game.homeTeam.logo" [alt]="item.game.homeTeam.abbreviation" class="mini-logo" />
                 </div>

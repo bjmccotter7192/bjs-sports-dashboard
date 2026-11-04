@@ -52,6 +52,17 @@
   .abbr {
     font-weight: 700;
     width: 3rem;
+    white-space: nowrap;
+
+    &:has(.rank) {
+      width: 4.1rem;
+    }
+
+    .rank {
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+      margin-right: 0.15rem;
+    }
   }
 
   .name {

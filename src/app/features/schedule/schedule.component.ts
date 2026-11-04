@@ -2,7 +2,7 @@ import { Component, computed, inject, resource } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { EmptyConfigComponent } from '../../shared/components/empty-config/empty-config.component';
 import { isEmptyConfig } from '../../core/config/config-validation';
-import { EspnService, formatDateYMD } from '../../core/services/espn.service';
+import { EspnService, formatDateYMD, withRecords } from '../../core/services/espn.service';
 import { DashboardConfigService } from '../../core/services/dashboard-config.service';
 import { fetchAll } from '../../core/utils/fetch-all';
 import { leagueLabel } from '../../core/config/leagues.config';
@@ -47,6 +47,14 @@ export class ScheduleComponent {
     loader: ({ params }) => fetchAll(params, team => this.espn.getTeamSchedule(team.sport, team.espnId), EMPTY),
   });
 
+  // ── Current records, one standings request per league ──
+  // Upcoming games in team schedules carry no records. This loads alongside the schedules
+  // and doesn't hold up the page: rows render first and records fill in when it lands.
+  private teamRecords = resource({
+    params: () => this.config().teams.map(t => t.sport),
+    loader: ({ params }) => fetchAll(params, sport => this.espn.getTeamRecords(sport), new Map<string, string>()),
+  });
+
   // ── Motorsport + golf resources ────────────────────────────────────
   private seriesBoards = resource({
     params: () => this.config().series.map(s => s.sport),
@@ -73,10 +81,11 @@ export class ScheduleComponent {
 
     // ── Team games (date-filtered client-side) ──
     const schedules = this.teamSchedules.value();
+    const records = this.teamRecords.hasValue() ? this.teamRecords.value() : undefined;
     for (const team of teams) {
       const games = this.espn.getGamesInDateRange(schedules?.get(team), this.rangeStart, this.rangeEnd);
       for (const game of games) {
-        items.push({ kind: 'game', game, team });
+        items.push({ kind: 'game', game: withRecords(game, records?.get(team.sport)), team });
       }
     }
 

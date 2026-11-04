@@ -40,7 +40,10 @@
             class="team-logo"
             loading="lazy"
           />
-          <span class="team-abbr">{{ myTeam()?.abbreviation }}</span>
+          <span class="team-abbr">
+            @if (myTeam()?.rank; as rank) { <span class="team-rank">#{{ rank }}</span> }
+            {{ myTeam()?.abbreviation }}
+          </span>
           @if (myTeam()?.record; as record) {
             <span class="team-record">{{ record }}</span>
           }
@@ -70,7 +73,10 @@
           @if (opponent()?.record; as record) {
             <span class="team-record">{{ record }}</span>
           }
-          <span class="team-abbr">{{ opponent()?.abbreviation }}</span>
+          <span class="team-abbr">
+            @if (opponent()?.rank; as rank) { <span class="team-rank">#{{ rank }}</span> }
+            {{ opponent()?.abbreviation }}
+          </span>
           <img
             [src]="opponent()?.logo"
             [alt]="opponent()?.displayName"
