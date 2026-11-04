@@ -13,7 +13,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { EspnService, formatDateYMD } from './espn.service';
+import { EspnService, formatDateYMD, sortStandingsRows } from './espn.service';
+import { StandingsRow } from '../models/standings.model';
 import { EspnEvent, EspnScoreboardResponse } from '../models/game.model';
 import { makeEspnTeamEvent, makeEspnRaceEvent } from '../../testing/test-fixtures';
 
@@ -141,6 +142,99 @@ describe('EspnService', () => {
         children: [entries({ id: 'abc', abbreviation: 'X', displayName: 'Bad Id', shortDisplayName: 'Bad' })],
       });
       expect(await promise).toEqual([]);
+    });
+  });
+
+  // ── getStandings ─────────────────────────────────────────────────────────
+
+  describe('getStandings', () => {
+    const STANDINGS = 'https://site.api.espn.com/apis/v2/sports';
+    const team = (id: string, short: string) => ({
+      id, abbreviation: short.slice(0, 3).toUpperCase(), displayName: `The ${short}`, shortDisplayName: short,
+      logos: [{ href: `https://example.com/${id}.png` }],
+    });
+    const stat = (type: string, value: number | undefined, displayValue: string) => ({ type, value, displayValue });
+    const entry = (t: unknown, ...stats: unknown[]) => ({ team: t, stats });
+
+    it('requests ESPN default grouping for conference leagues', async () => {
+      const promise = service.getStandings('basketball/nba');
+      http.expectOne(`${STANDINGS}/basketball/nba/standings`).flush({});
+      expect(await promise).toEqual([]);
+    });
+
+    it('requests divisions (level=3) where the format asks for them', async () => {
+      const promise = service.getStandings('football/nfl');
+      http.expectOne(`${STANDINGS}/football/nfl/standings?level=3`).flush({});
+      expect(await promise).toEqual([]);
+    });
+
+    it('returns one group per node with entries, sorted by seed (ESPN sends NBA worst-first)', async () => {
+      const promise = service.getStandings('basketball/nba');
+      http.expectOne(`${STANDINGS}/basketball/nba/standings`).flush({
+        children: [
+          { name: 'Eastern Conference', standings: { entries: [
+            entry(team('4', 'Bulls'), stat('playoffseed', 13, '13'), stat('wins', 1, '1')),
+            entry(team('18', 'Knicks'), stat('playoffseed', 2, '2'), stat('wins', 5, '5')),
+          ] } },
+          { name: 'Western Conference', standings: { entries: [entry(team('25', 'Thunder'), stat('playoffseed', 1, '1'))] } },
+        ],
+      });
+      const groups = await promise;
+      expect(groups.map(g => g.name)).toEqual(['Eastern Conference', 'Western Conference']);
+      expect(groups[0].rows.map(r => r.name)).toEqual(['Knicks', 'Bulls']);
+      expect(groups[0].rows[0]).toEqual({
+        teamId: '18', abbreviation: 'KNI', name: 'Knicks', logo: 'https://example.com/18.png',
+        stats: { playoffseed: { value: 2, display: '2' }, wins: { value: 5, display: '5' } },
+      });
+    });
+
+    it('keeps only top-level stats, first occurrence wins', async () => {
+      const promise = service.getStandings('football/college-football');
+      http.expectOne(`${STANDINGS}/football/college-football/standings`).flush({
+        children: [{ name: 'Big Ten', standings: { entries: [entry(team('26', 'UCLA'),
+          stat('wins', 8, '8'), stat('total', undefined, '8-0'),
+          stat('homerecord_wins', 5, '5'), stat('wins', 99, '99'),
+        )] } }],
+      });
+      expect((await promise)[0].rows[0].stats).toEqual({
+        wins: { value: 8, display: '8' }, total: { value: null, display: '8-0' },
+      });
+    });
+
+    it('sorts MLB divisions by games behind, then win percentage', async () => {
+      const promise = service.getStandings('baseball/mlb');
+      http.expectOne(`${STANDINGS}/baseball/mlb/standings?level=3`).flush({
+        children: [{ name: 'AL Central', standings: { entries: [
+          entry(team('4', 'White Sox'), stat('playoffseed', 6, '6'), stat('gamesbehind', 1, '1'), stat('winpercent', 0.519, '.519')),
+          entry(team('5', 'Guardians'), stat('playoffseed', 2, '2'), stat('gamesbehind', 0, '-'), stat('winpercent', 0.525, '.525')),
+        ] } }],
+      });
+      expect((await promise)[0].rows.map(r => r.name)).toEqual(['Guardians', 'White Sox']);
+    });
+
+    it('drops entries without a team id or name', async () => {
+      const promise = service.getStandings('soccer/eng.1');
+      http.expectOne(`${STANDINGS}/soccer/eng.1/standings`).flush({
+        children: [{ name: 'EPL', standings: { entries: [entry({ abbreviation: 'X' }), entry(team('359', 'Arsenal'))] } }],
+      });
+      expect((await promise)[0].rows.map(r => r.teamId)).toEqual(['359']);
+    });
+  });
+
+  describe('sortStandingsRows', () => {
+    const r = (id: string, stats: Record<string, number | null>): StandingsRow => ({
+      teamId: id, abbreviation: id, name: id, logo: '',
+      stats: Object.fromEntries(Object.entries(stats).map(([k, v]) => [k, { value: v, display: '' }])),
+    });
+
+    it('puts rows missing the sort stat last and keeps ties stable', () => {
+      const rows = [r('a', {}), r('b', { rank: 2 }), r('c', { rank: 1 }), r('d', { rank: 2 })];
+      expect(sortStandingsRows(rows, [['rank', 'asc']]).map(x => x.teamId)).toEqual(['c', 'b', 'd', 'a']);
+    });
+
+    it('breaks ties with later keys', () => {
+      const rows = [r('a', { gb: 0, pct: 0.4 }), r('b', { gb: 0, pct: 0.6 })];
+      expect(sortStandingsRows(rows, [['gb', 'asc'], ['pct', 'desc']]).map(x => x.teamId)).toEqual(['b', 'a']);
     });
   });
 

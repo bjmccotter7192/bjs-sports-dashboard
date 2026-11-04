@@ -1,6 +1,6 @@
 import { Component, DestroyRef, computed, effect, inject, resource, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { EspnService } from '../../core/services/espn.service';
 import { DashboardConfigService } from '../../core/services/dashboard-config.service';
 import { TimeZoneService } from '../../core/services/time-zone.service';
@@ -12,6 +12,7 @@ import { Game } from '../../core/models/game.model';
 import { SportLeague } from '../../core/models/team-config.model';
 import { GameCardComponent } from '../../shared/components/game-card/game-card.component';
 import { GameStatsModalComponent } from '../../shared/components/game-stats-modal/game-stats-modal.component';
+import { LeagueStandingsComponent } from './league-standings/league-standings.component';
 
 /** How often to re-fetch while any game on the page is live. */
 export const LIVE_REFRESH_MS = 30_000;
@@ -21,10 +22,11 @@ const SMART_DEFAULT_LEAD_MS = 2 * 60 * 60 * 1000;
 /**
  * Every game in one league for one ESPN game day: `#/league/nba?date=20261020`.
  * Without `date`, opens today — or yesterday when nothing today has started or is close.
+ * `?tab=standings` shows the league table instead.
  */
 @Component({
   selector: 'app-league',
-  imports: [GameCardComponent, GameStatsModalComponent],
+  imports: [RouterLink, GameCardComponent, GameStatsModalComponent, LeagueStandingsComponent],
   templateUrl: './league.component.html',
   styleUrl: './league.component.scss',
 })
@@ -50,6 +52,9 @@ export class LeagueComponent {
     return isDateKey(d) ? d : null;
   });
 
+  readonly tab = computed<'scores' | 'standings'>(() =>
+    this.query().get('tab') === 'standings' ? 'standings' : 'scores');
+
   readonly dateKey = computed(() => this.requestedDate() ?? this.todayKey);
   readonly dateLabel = computed(() => formatDateKey(this.dateKey(), { weekday: 'long', month: 'long', day: 'numeric' }));
   readonly isToday = computed(() => this.dateKey() === this.todayKey);
@@ -57,7 +62,8 @@ export class LeagueComponent {
   readonly board = resource({
     params: () => {
       const sport = this.sport();
-      return sport ? { sport, date: this.dateKey() } : undefined;
+      // Scores aren't fetched on the standings tab, which also keeps the smart default idle
+      return sport && this.tab() === 'scores' ? { sport, date: this.dateKey() } : undefined;
     },
     loader: ({ params }) => this.espn.getScoreboard(params.sport, params.date),
   });

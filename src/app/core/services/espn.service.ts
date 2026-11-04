@@ -19,6 +19,8 @@ import {
 import { SportLeague, MotorsportLeague, GolfLeague, TeamColors, TeamOption } from '../models/team-config.model';
 import { isHexColor, sanitizeTeam } from '../config/config-validation';
 import { leagueInfo } from '../config/leagues.config';
+import { STANDINGS_FORMATS, SortKey } from '../config/standings.config';
+import { StandingsGroup, StandingsRow, StandingsStat } from '../models/standings.model';
 
 interface EspnRawNewsArticle {
   id: number;
@@ -556,6 +558,56 @@ export class EspnService {
   }
 
   /**
+   * League standings as one table per group (conference, division, or the whole league),
+   * shaped and sorted by `STANDINGS_FORMATS`. ESPN's entry order isn't standings order
+   * (NBA comes back worst-first), so rows are always re-sorted.
+   *
+   * Only top-level stats are kept: split stats repeat the same `name` with a prefixed
+   * `type` ('homerecord_wins'), so stats are keyed by `type`.
+   */
+  async getStandings(sport: SportLeague): Promise<StandingsGroup[]> {
+    const format = STANDINGS_FORMATS[sport];
+    const params: Record<string, string> = format.level ? { level: format.level } : {};
+    const data = await firstValueFrom(
+      this.http.get<any>(`${this.standingsUrl}/${sport}/standings`, { params })
+    );
+    const groups: StandingsGroup[] = [];
+    const visit = (node: any) => {
+      const entries: any[] = node?.standings?.entries ?? [];
+      const rows = entries.map(e => this.parseStandingsRow(e)).filter((r): r is StandingsRow => r !== null);
+      if (rows.length) {
+        groups.push({ name: String(node?.name ?? ''), rows: sortStandingsRows(rows, format.sort) });
+      }
+      for (const child of node?.children ?? []) visit(child);
+    };
+    visit(data);
+    return groups;
+  }
+
+  private parseStandingsRow(entry: any): StandingsRow | null {
+    const team = entry?.team;
+    const id = team?.id;
+    const name = team?.shortDisplayName || team?.displayName;
+    if (typeof id !== 'string' || typeof name !== 'string') return null;
+    const stats: Record<string, StandingsStat> = {};
+    for (const s of entry?.stats ?? []) {
+      const type = s?.type;
+      if (typeof type !== 'string' || type.includes('_') || Object.hasOwn(stats, type)) continue;
+      stats[type] = {
+        value: typeof s.value === 'number' && Number.isFinite(s.value) ? s.value : null,
+        display: typeof s.displayValue === 'string' ? s.displayValue : '',
+      };
+    }
+    return {
+      teamId: id,
+      abbreviation: typeof team.abbreviation === 'string' ? team.abbreviation : '',
+      name,
+      logo: typeof team.logos?.[0]?.href === 'string' ? team.logos[0].href : '',
+      stats,
+    };
+  }
+
+  /**
    * A team's colors. The per-team schedule endpoint is the only CORS-enabled source
    * that includes them (`team.color` / `team.alternateColor`, hex without '#').
    */
@@ -609,6 +661,21 @@ export class EspnService {
       sourceColor,
     };
   }
+}
+
+/** Stable multi-key sort. Rows missing a sort stat go after rows that have it. */
+export function sortStandingsRows(rows: StandingsRow[], keys: SortKey[]): StandingsRow[] {
+  return [...rows].sort((a, b) => {
+    for (const [type, dir] of keys) {
+      const av = a.stats[type]?.value ?? null;
+      const bv = b.stats[type]?.value ?? null;
+      if (av === bv) continue;
+      if (av === null) return 1;
+      if (bv === null) return -1;
+      return dir === 'asc' ? av - bv : bv - av;
+    }
+    return 0;
+  });
 }
 
 export function formatDateYMD(date: Date): string {
