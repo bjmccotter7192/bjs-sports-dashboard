@@ -13,10 +13,10 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { EspnService, formatDateYMD, overallRecord, sortStandingsRows } from './espn.service';
+import { EspnService, formatDateYMD, overallRecord, parseRecord, pollRank, sortStandingsRows, withRecords } from './espn.service';
 import { StandingsRow } from '../models/standings.model';
 import { EspnEvent, EspnScoreboardResponse } from '../models/game.model';
-import { makeEspnTeamEvent, makeEspnRaceEvent } from '../../testing/test-fixtures';
+import { makeEspnTeamEvent, makeEspnRaceEvent, makeGame } from '../../testing/test-fixtures';
 
 const BASE = 'https://site.api.espn.com/apis/site/v2/sports';
 
@@ -277,6 +277,27 @@ describe('EspnService', () => {
       expect(result.events.map(e => e.id)).toEqual(['r1', 'shared', 'f1']);
     });
 
+    it("keeps each past game's records and poll ranks for parseGame", async () => {
+      const promise = service.getTeamSchedule('basketball/mens-college-basketball', '130');
+      http.expectOne(`${BASE}/basketball/mens-college-basketball/teams/130/schedule`).flush({ events: [{
+        id: 'g', date: '2026-11-03T23:00Z', name: 'T', shortName: 'T', status: null,
+        competitions: [{ date: '2026-11-03T23:00Z',
+          status: { type: { state: 'post', completed: true, description: 'Final', shortDetail: 'Final' } },
+          competitors: [
+            { homeAway: 'home', team: { id: '130', abbreviation: 'MICH' }, score: { displayValue: '80' },
+              record: [{ type: 'total', displayValue: '1-0' }, { type: 'vsconf', displayValue: '0-0' }],
+              curatedRank: { current: 16 } },
+            { homeAway: 'away', team: { id: '2473', abbreviation: 'OAK' }, score: { displayValue: '70' },
+              curatedRank: { current: 99 } },
+          ] }],
+      }] });
+      const game = service.parseGame((await promise).events[0]);
+      expect(game.homeTeam.record).toBe('1-0');
+      expect(game.homeTeam.rank).toBe(16);
+      expect(game.awayTeam.record).toBeUndefined();
+      expect(game.awayTeam.rank).toBeUndefined();
+    });
+
     it('makes a single request for non-soccer leagues', async () => {
       const promise = service.getTeamSchedule('basketball/wnba', '20');
       const req = http.expectOne(`${BASE}/basketball/wnba/teams/20/schedule`);
@@ -440,6 +461,53 @@ describe('EspnService', () => {
 
   // ── parseGame ────────────────────────────────────────────────────────────
 
+  describe('parseRecord / pollRank', () => {
+    it("drops the NHL's points suffix", () => {
+      expect(parseRecord('12-2-2, 26 PTS')).toBe('12-2-2');
+      expect(parseRecord('93-68')).toBe('93-68');
+      expect(parseRecord('8-1-1, 0 PTS extra')).toBeUndefined();
+      expect(parseRecord(42)).toBeUndefined();
+    });
+
+    it('keeps only Top-25 ranks (ESPN sends 99 for unranked)', () => {
+      expect(pollRank({ current: 8 })).toBe(8);
+      expect(pollRank({ current: 25 })).toBe(25);
+      expect(pollRank({ current: 99 })).toBeUndefined();
+      expect(pollRank({ current: 0 })).toBeUndefined();
+      expect(pollRank(undefined)).toBeUndefined();
+    });
+  });
+
+  describe('withRecords', () => {
+    const records = new Map([['10', '93-68'], ['4', '60-102']]);
+
+    it("fills missing records but keeps ESPN's own", () => {
+      const base = makeGame();
+      const game = withRecords(makeGame({ homeTeam: { ...base.homeTeam, record: '1-0' } }), records);
+      expect(game.homeTeam.record).toBe('1-0');
+      expect(game.awayTeam.record).toBe('60-102');
+    });
+
+    it('returns the same game when there is nothing to add', () => {
+      const game = makeGame();
+      expect(withRecords(game, undefined)).toBe(game);
+      expect(withRecords(game, new Map([['999', '1-0']]))).toBe(game);
+    });
+  });
+
+  describe('getTeamRecords', () => {
+    it('maps every team to its overall record from standings', async () => {
+      const promise = service.getTeamRecords('hockey/nhl');
+      http.expectOne('https://site.api.espn.com/apis/v2/sports/hockey/nhl/standings?level=3').flush({
+        children: [{ name: 'Metro', standings: { entries: [
+          { team: { id: '7', shortDisplayName: 'Hurricanes' }, stats: [{ type: 'total', displayValue: '12-2-2, 26 PTS' }] },
+          { team: { id: '13', shortDisplayName: 'Rangers' }, stats: [] },
+        ] } }],
+      });
+      expect([...(await promise)]).toEqual([['7', '12-2-2']]);
+    });
+  });
+
   describe('overallRecord', () => {
     it("reads 'total', or the NHL's 'ytd'", () => {
       expect(overallRecord([{ type: 'total', summary: '6-1' }])).toBe('6-1');
@@ -468,6 +536,15 @@ describe('EspnService', () => {
       expect(game.homeTeam.score).toBe('5');
       expect(game.homeTeam.isWinner).toBe(true);
       expect(game.awayTeam.isWinner).toBe(false);
+    });
+
+    it('maps a Top-25 poll rank from the scoreboard', () => {
+      const event = makeEspnTeamEvent();
+      event.competitions[0].competitors[0].curatedRank = { current: 8 };
+      event.competitions[0].competitors[1].curatedRank = { current: 99 };
+      const game = service.parseGame(event);
+      expect(game.homeTeam.rank).toBe(8);
+      expect(game.awayTeam.rank).toBeUndefined();
     });
 
     it("maps each team's overall record when the scoreboard has one", () => {

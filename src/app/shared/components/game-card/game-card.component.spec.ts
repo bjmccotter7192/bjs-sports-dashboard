@@ -33,6 +33,14 @@ describe('GameCardComponent', () => {
     expect(el().querySelector('.status')?.textContent).toContain('Final');
   });
 
+  it('shows a poll rank before ranked teams only', () => {
+    render(makeGame({ homeTeam: { ...makeGame().homeTeam, rank: 8 } }), { sport: 'basketball/mens-college-basketball' });
+    const rows = el().querySelectorAll('.team-row');
+    expect(rows[0].querySelector('.rank')).toBeNull();
+    expect(rows[1].querySelector('.rank')?.textContent).toBe('8');
+    expect(rows[1].querySelector('.abbr')?.textContent).toBe('8NYY');
+  });
+
   it("shows each team's record when ESPN provides one", () => {
     render(makeGame({ homeTeam: { ...makeGame().homeTeam, record: '93-68' } }));
     const rows = el().querySelectorAll('.team-row');

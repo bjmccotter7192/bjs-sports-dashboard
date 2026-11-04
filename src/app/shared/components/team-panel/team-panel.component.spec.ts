@@ -248,7 +248,20 @@ describe('TeamPanelComponent', () => {
     expect(el.querySelector('.opp-team .team-record')?.textContent).toBe('3-4');
   });
 
-  it('omits the record line when ESPN sends none (team schedule data)', () => {
+  it('shows a poll rank before a ranked opponent', () => {
+    const base = makeGame();
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({
+      homeTeam: { ...base.homeTeam, id: '18' },
+      awayTeam: { ...base.awayTeam, rank: 12 },
+    }));
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.opp-team .team-rank')?.textContent).toBe('#12');
+    expect(el.querySelector('.my-team .team-rank')).toBeNull();
+  });
+
+  it('omits the record line when ESPN sends none', () => {
     fixture.componentRef.setInput('team', knicks);
     fixture.componentRef.setInput('game', makeGame({ homeTeam: { ...makeGame().homeTeam, id: '18' } }));
     fixture.detectChanges();

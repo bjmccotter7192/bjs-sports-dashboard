@@ -134,6 +134,38 @@ describe('ScheduleComponent', () => {
     }
   });
 
+  // ── Records and ranks ───────────────────────────────────────────────────────
+
+  it('fills upcoming games with current records from standings, one request per league', async () => {
+    const game = makeGame({ id: 'g', date: new Date('2026-06-20T18:05:00Z'),
+      homeTeam: { ...makeGame().homeTeam, rank: 5 } });
+    mockEspn.getGamesInDateRange.mockReturnValueOnce([game]).mockReturnValue([]);
+    mockEspn.getTeamRecords.mockResolvedValue(new Map([['10', '93-68'], ['4', '60-102']]));
+
+    fixture.detectChanges();
+    await settle();
+
+    const sports = new Set(SAMPLE_CONFIG.teams.map(t => t.sport));
+    expect(mockEspn.getTeamRecords).toHaveBeenCalledTimes(sports.size);
+    const row: HTMLElement = fixture.nativeElement.querySelector('.game-row');
+    expect(row.querySelector('.away-record')?.textContent).toBe('60-102');
+    expect(row.querySelector('.home-record')?.textContent).toBe('93-68');
+    expect(row.querySelector('.rank')?.textContent).toBe('#5');
+  });
+
+  it('still renders games when the standings request fails', async () => {
+    mockEspn.getGamesInDateRange
+      .mockReturnValueOnce([makeGame({ id: 'g', date: new Date('2026-06-20T18:05:00Z') })])
+      .mockReturnValue([]);
+    mockEspn.getTeamRecords.mockRejectedValue(new Error('500'));
+
+    fixture.detectChanges();
+    await settle();
+
+    expect(component.scheduleDays().length).toBe(1);
+    expect(fixture.nativeElement.querySelector('.record')).toBeNull();
+  });
+
   // ── scheduleDays() with motorsport races ───────────────────────────────────
 
   it('scheduleDays() includes races returned by getAllUpcomingRaces', async () => {

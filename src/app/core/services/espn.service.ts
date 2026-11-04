@@ -86,6 +86,11 @@ export class EspnService {
       // Schedule endpoint returns score as { value, displayValue }; scoreboard returns a string
       score: typeof c.score === 'object' && c.score !== null ? c.score.displayValue : c.score,
       winner: c.winner,
+      // Schedule calls it `record` with `displayValue`; the scoreboard uses `records` with `summary`
+      records: Array.isArray(c.record)
+        ? c.record.map((r: any) => ({ type: r?.type, summary: r?.displayValue }))
+        : undefined,
+      curatedRank: c.curatedRank,
       team: c.team
         ? {
             id: c.team.id,
@@ -355,6 +360,7 @@ export class EspnService {
 
   private parseTeam(competitor: EspnCompetitor): GameTeam {
     const record = overallRecord(competitor.records);
+    const rank = pollRank(competitor.curatedRank);
     return {
       id: competitor.team?.id ?? '',
       abbreviation: competitor.team?.abbreviation ?? '',
@@ -364,6 +370,7 @@ export class EspnService {
       isWinner: competitor.winner ?? false,
       primaryColor: competitor.team?.color ? `#${competitor.team.color}` : '#666',
       ...(record ? { record } : {}),
+      ...(rank ? { rank } : {}),
     };
   }
 
@@ -586,6 +593,21 @@ export class EspnService {
     return groups;
   }
 
+  /**
+   * Current overall record for every team in a league, keyed by team id, from standings.
+   * Upcoming games in team schedules carry no records, so Schedule fills them from here.
+   */
+  async getTeamRecords(sport: SportLeague): Promise<Map<string, string>> {
+    const records = new Map<string, string>();
+    for (const group of await this.getStandings(sport)) {
+      for (const row of group.rows) {
+        const record = parseRecord(row.stats['total']?.display);
+        if (record) records.set(row.teamId, record);
+      }
+    }
+    return records;
+  }
+
   private parseStandingsRow(entry: any): StandingsRow | null {
     const team = entry?.team;
     const id = team?.id;
@@ -666,14 +688,43 @@ export class EspnService {
 }
 
 /**
- * The overall record from a scoreboard competitor's `records`. Most leagues label it
- * `type: 'total'`; the NHL uses `'ytd'`. Only plain W-L(-T/OTL) summaries are accepted.
+ * The overall record from a competitor's `records`. Most leagues label it
+ * `type: 'total'`; the NHL uses `'ytd'`.
  */
 export function overallRecord(records: EspnCompetitor['records']): string | undefined {
   if (!Array.isArray(records)) return undefined;
   const overall = records.find(r => r?.type === 'total' || r?.type === 'ytd');
-  const summary = overall?.summary;
-  return typeof summary === 'string' && /^\d+(-\d+){1,2}$/.test(summary) ? summary : undefined;
+  return parseRecord(overall?.summary);
+}
+
+/**
+ * A plain W-L(-T/OTL) record from an ESPN summary. NHL summaries carry points
+ * ('12-2-2, 26 PTS'), which are dropped. Anything else is rejected.
+ */
+export function parseRecord(summary: unknown): string | undefined {
+  if (typeof summary !== 'string') return undefined;
+  return /^(\d+(?:-\d+){1,2})(?:, \d+ PTS)?$/.exec(summary)?.[1];
+}
+
+/** A Top-25 poll rank, or undefined. ESPN sends 99 for unranked teams. */
+export function pollRank(rank: EspnCompetitor['curatedRank']): number | undefined {
+  const n = rank?.current;
+  return typeof n === 'number' && Number.isInteger(n) && n >= 1 && n <= 25 ? n : undefined;
+}
+
+/**
+ * Fills each side's missing record from a team id → record map (see `getTeamRecords()`).
+ * Records ESPN already put on the game win.
+ */
+export function withRecords(game: Game, records: ReadonlyMap<string, string> | undefined): Game {
+  if (!records?.size) return game;
+  const fill = (t: GameTeam): GameTeam => {
+    const record = t.record ?? records.get(t.id);
+    return record && record !== t.record ? { ...t, record } : t;
+  };
+  const homeTeam = fill(game.homeTeam);
+  const awayTeam = fill(game.awayTeam);
+  return homeTeam === game.homeTeam && awayTeam === game.awayTeam ? game : { ...game, homeTeam, awayTeam };
 }
 
 /** Stable multi-key sort. Rows missing a sort stat go after rows that have it. */
