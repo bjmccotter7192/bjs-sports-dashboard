@@ -214,7 +214,7 @@ export class EspnService {
     const data = await firstValueFrom(
       this.http.get<any>(`${this.baseUrl}/${sport}/summary`, { params: { event: eventId } })
     );
-    return this.parseSummaryLeaders(data.leaders ?? []);
+    return this.parseSummaryLeaders(data?.leaders ?? []);
   }
 
   /** Fetch MLB boxscore — returns top batters per team + starting pitchers */
@@ -222,7 +222,7 @@ export class EspnService {
     const data = await firstValueFrom(
       this.http.get<any>(`${this.baseUrl}/baseball/mlb/summary`, { params: { event: eventId } })
     );
-    return this.parseMlbBoxscore(data.boxscore?.players ?? []);
+    return this.parseMlbBoxscore(data?.boxscore?.players ?? []);
   }
 
   private parseMlbBoxscore(teamGroups: any[]): StatCategory[] {
@@ -664,7 +664,7 @@ export class EspnService {
         url, { params: { limit: limit.toString() } }
       )
     );
-    return (data.articles ?? data.feed ?? []).map(a =>
+    return (data?.articles ?? data?.feed ?? []).map(a =>
       this.parseNewsArticle(a, sourceName, sourceColor)
     );
   }
