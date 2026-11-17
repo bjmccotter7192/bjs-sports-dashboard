@@ -354,6 +354,41 @@ describe('ScheduleComponent', () => {
     expect(mockEspn.getAllUpcomingRaces).toHaveBeenCalledWith({ events: [] });
   });
 
+  it("still renders the other teams' games when one team schedule rejects", async () => {
+    const [failing, ...others] = SAMPLE_CONFIG.teams;
+    // Each team's schedule carries a marker event so its games can be traced back to it;
+    // the failing team falls back to the empty schedule and yields no games.
+    mockEspn.getTeamSchedule.mockImplementation((sport: string, espnId: string) =>
+      espnId === failing.espnId && sport === failing.sport
+        ? Promise.reject(new Error('500'))
+        : Promise.resolve({ events: [{ id: `${sport}:${espnId}` }] }));
+    mockEspn.getGamesInDateRange.mockImplementation((schedule?: { events: { id: string }[] }) =>
+      (schedule?.events ?? []).map(e => makeGame({ id: e.id, date: new Date('2026-06-20T18:05:00Z') })));
+
+    fixture.detectChanges();
+    await settle();
+
+    expect(component.isLoading()).toBe(false);
+    expect(fixture.nativeElement.querySelector('.loading-state')).toBeNull();
+    const items = component.scheduleDays().flatMap(d => d.items);
+    expect(items.map(i => i.kind === 'game' ? i.team : null)).toEqual(others);
+    expect(fixture.nativeElement.querySelectorAll('.game-row').length).toBe(others.length);
+  });
+
+  it('shows the empty state, not a stuck skeleton, when every source rejects', async () => {
+    mockEspn.getTeamSchedule.mockRejectedValue(new Error('500'));
+    mockEspn.getScoreboard.mockRejectedValue(new Error('500'));
+
+    fixture.detectChanges();
+    await settle();
+
+    expect(component.isLoading()).toBe(false);
+    expect(() => component.scheduleDays()).not.toThrow();
+    expect(component.scheduleDays()).toEqual([]);
+    expect(fixture.nativeElement.querySelector('.loading-state')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.empty-state')?.textContent).toContain('No upcoming events');
+  });
+
   // ── Custom config ───────────────────────────────────────────────────────────
 
   describe('with a custom config', () => {
