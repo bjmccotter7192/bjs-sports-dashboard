@@ -45,12 +45,22 @@ describe('SettingsComponent', () => {
     await settle();
   }
 
+  let originalClipboard: PropertyDescriptor | undefined;
+
   beforeEach(() => {
     localStorage.clear();
     mockEspn = createMockEspnService();
+    originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    if (originalClipboard) {
+      Object.defineProperty(navigator, 'clipboard', originalClipboard);
+    } else {
+      delete (navigator as { clipboard?: Clipboard }).clipboard;
+    }
+  });
 
   // ── Dashboard name ──────────────────────────────────────────────────────────
 

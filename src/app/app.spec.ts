@@ -17,6 +17,8 @@ describe('App', () => {
     }).compileComponents();
   });
 
+  afterEach(() => vi.restoreAllMocks());
+
   it('should create the app', () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
@@ -192,7 +194,6 @@ describe('App', () => {
     window.dispatchEvent(new Event('resize'));
     fixture.detectChanges();
     expect(root.querySelector('.mobile-menu')).toBeNull();
-    width.mockRestore();
   });
 });
 
