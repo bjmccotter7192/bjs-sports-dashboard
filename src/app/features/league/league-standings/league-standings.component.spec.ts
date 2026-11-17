@@ -89,8 +89,24 @@ describe('LeagueStandingsComponent', () => {
     expect(el().textContent).toContain('No NBA standings available');
   });
 
+  it("shows a team's logo when ESPN sends one, and none when it doesn't", async () => {
+    await create([{ name: 'West', rows: [
+      { ...row('25', 'Thunder'), logo: 'https://a.espncdn.com/okc.png' },
+      row('7', 'Nuggets'),
+    ] }]);
+    const rows = el().querySelectorAll('tbody tr');
+    expect(rows[0].querySelector('img.logo')?.getAttribute('src')).toBe('https://a.espncdn.com/okc.png');
+    expect(rows[1].querySelector('img.logo')).toBeNull();
+  });
+
   it('shows an error when ESPN fails', async () => {
     await create(new Error('500'));
     expect(el().textContent).toContain("Couldn't load NBA standings");
+  });
+
+  it('has no groups (and renders no tables) when ESPN fails', async () => {
+    await create(new Error('500'));
+    expect(fixture.componentInstance.groups()).toEqual([]);
+    expect(el().querySelector('.standings-table')).toBeNull();
   });
 });

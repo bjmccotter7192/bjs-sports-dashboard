@@ -14,6 +14,7 @@ import { EspnService } from '../../core/services/espn.service';
 import { createMockEspnService } from '../../testing/mock-espn.service';
 import { TimeZoneService } from '../../core/services/time-zone.service';
 import { makeGame, makeRace } from '../../testing/test-fixtures';
+import { Tournament } from '../../core/models/game.model';
 import { SAMPLE_CONFIG } from '../../testing/sample-config';
 import { provideDashboardConfig, makeConfig, makeTeamConfig } from '../../testing/dashboard-config';
 
@@ -261,6 +262,96 @@ describe('ScheduleComponent', () => {
     fixture.detectChanges();
     await settle();
     expect(mockEspn.getScoreboard).toHaveBeenCalledTimes(SAMPLE_CONFIG.series.length + SAMPLE_CONFIG.golf.length);
+  });
+
+  // ── Races, tournaments and ranks in the DOM ────────────────────────────────
+
+  it('renders a race row with its name, series, broadcast and venue', async () => {
+    mockEspn.getAllUpcomingRaces
+      .mockReturnValueOnce([makeRace({ id: 'r1', name: 'Austrian Grand Prix', broadcast: 'Apple TV', venue: 'Red Bull Ring' })])
+      .mockReturnValue([]);
+
+    fixture.detectChanges();
+    await settle();
+
+    const row: HTMLElement = fixture.nativeElement.querySelector('.race-row');
+    expect(row.querySelector('.sport-tag')?.textContent?.trim()).toBe('RACE');
+    expect(row.querySelector('.my-team-label')?.textContent?.trim()).toBe(SAMPLE_CONFIG.series[0].shortName);
+    expect(row.querySelector('.matchup-text')?.textContent?.trim()).toBe('Austrian Grand Prix');
+    expect(row.querySelector('.game-broadcast')?.textContent?.trim()).toBe('Apple TV');
+    expect(row.querySelector('.game-venue')?.textContent?.trim()).toBe('Red Bull Ring');
+  });
+
+  it('renders a golf tournament row with its date range and venue', async () => {
+    const tournament: Tournament = {
+      id: 't1', name: 'The Memorial Tournament', shortName: 'Memorial',
+      startDate: new Date(2026, 5, 25, 12), endDate: new Date(2026, 5, 28, 12),
+      status: { state: 'pre', detail: 'Scheduled' }, venue: 'Muirfield Village',
+    };
+    mockEspn.getAllUpcomingTournaments.mockReturnValueOnce([tournament]).mockReturnValue([]);
+
+    fixture.detectChanges();
+    await settle();
+
+    const days = component.scheduleDays();
+    expect(days.length).toBe(1);
+    expect(days[0].dateKey).toBe('20260625');
+    const item = days[0].items[0];
+    expect(item.kind).toBe('tournament');
+    if (item.kind === 'tournament') expect(item.series).toBe(SAMPLE_CONFIG.golf[0]);
+
+    const row: HTMLElement = fixture.nativeElement.querySelector('.race-row');
+    expect(row.querySelector('.sport-tag')?.textContent?.trim()).toBe('GOLF');
+    expect(row.querySelector('.matchup-text')?.textContent?.trim()).toBe('The Memorial Tournament');
+    expect(row.querySelector('.game-time')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Jun 25 – Jun 28');
+    expect(row.querySelector('.game-venue')?.textContent?.trim()).toBe('Muirfield Village');
+  });
+
+  it('renders a tournament with no end date or venue as just its start date', async () => {
+    mockEspn.getAllUpcomingTournaments.mockReturnValueOnce([{
+      id: 't2', name: 'Open', shortName: 'Open', startDate: new Date(2026, 6, 2, 12),
+      status: { state: 'pre', detail: '' },
+    }]).mockReturnValue([]);
+
+    fixture.detectChanges();
+    await settle();
+
+    const row: HTMLElement = fixture.nativeElement.querySelector('.race-row');
+    expect(row.querySelector('.game-time')?.textContent?.trim()).toBe('Jul 2');
+    expect(row.querySelector('.game-venue')).toBeNull();
+  });
+
+  it("shows the away team's rank when it has one", async () => {
+    const game = makeGame({ id: 'g', date: new Date('2026-06-20T18:05:00Z'),
+      awayTeam: { ...makeGame().awayTeam, rank: 12 } });
+    mockEspn.getGamesInDateRange.mockReturnValueOnce([game]).mockReturnValue([]);
+
+    fixture.detectChanges();
+    await settle();
+
+    const ranks = [...fixture.nativeElement.querySelectorAll('.game-row .rank')].map((r: Element) => r.textContent);
+    expect(ranks).toEqual(['#12']);
+  });
+
+  it('still renders games and tournaments when the motorsport scoreboards reject', async () => {
+    const seriesSports = new Set<string>(SAMPLE_CONFIG.series.map(s => s.sport));
+    mockEspn.getScoreboard.mockImplementation((sport: string) =>
+      seriesSports.has(sport) ? Promise.reject(new Error('500')) : Promise.resolve({ events: [] }));
+    mockEspn.getGamesInDateRange
+      .mockReturnValueOnce([makeGame({ id: 'g', date: new Date('2026-06-20T18:05:00Z') })])
+      .mockReturnValue([]);
+    mockEspn.getAllUpcomingTournaments.mockReturnValueOnce([{
+      id: 't3', name: 'Travelers', shortName: 'Travelers', startDate: new Date(2026, 5, 25, 12),
+      status: { state: 'pre', detail: '' },
+    }]).mockReturnValue([]);
+
+    fixture.detectChanges();
+    await settle();
+
+    expect(component.isLoading()).toBe(false);
+    expect(fixture.nativeElement.querySelector('.loading-state')).toBeNull();
+    expect(component.scheduleDays().flatMap(d => d.items.map(i => i.kind)).sort()).toEqual(['game', 'tournament']);
+    expect(mockEspn.getAllUpcomingRaces).toHaveBeenCalledWith({ events: [] });
   });
 
   // ── Custom config ───────────────────────────────────────────────────────────

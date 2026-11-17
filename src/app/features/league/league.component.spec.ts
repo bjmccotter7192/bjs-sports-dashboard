@@ -145,6 +145,18 @@ describe('LeagueComponent', () => {
     expect(component.dateKey()).toBe(today);
   });
 
+  it('disables Today on today, and clicking it from another day goes back to today', async () => {
+    serve([live('g1')]);
+    await create('nba', '20261020');
+    const todayBtn = () => el().querySelector<HTMLButtonElement>('.today-btn')!;
+    expect(todayBtn().disabled).toBe(false);
+    todayBtn().click();
+    await settle();
+    expect(navigate).toHaveBeenLastCalledWith([], expect.objectContaining({ queryParams: { date: today } }));
+    expect(component.dateKey()).toBe(today);
+    expect(todayBtn().disabled).toBe(true);
+  });
+
   // ── Cards ───────────────────────────────────────────────────────────────────
 
   it("lists the user's teams first, then by start time", async () => {
@@ -170,6 +182,17 @@ describe('LeagueComponent', () => {
     el().querySelector<HTMLButtonElement>('.game-card')!.click();
     fixture.detectChanges();
     expect(el().querySelector('app-game-stats-modal')).not.toBeNull();
+  });
+
+  it('closes the box score when its close button is clicked', async () => {
+    serve([makeGame({ id: 'final' })]);
+    await create('nba', '20261020');
+    el().querySelector<HTMLButtonElement>('.game-card')!.click();
+    fixture.detectChanges();
+    el().querySelector<HTMLButtonElement>('app-game-stats-modal .close-btn')!.click();
+    fixture.detectChanges();
+    expect(el().querySelector('app-game-stats-modal')).toBeNull();
+    expect(component.selectedGame()).toBeNull();
   });
 
   it('shows an error when ESPN fails', async () => {
