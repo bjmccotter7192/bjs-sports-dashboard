@@ -176,4 +176,20 @@ describe('GameStatsModalComponent', () => {
     expect(mockEspn.fetchGameLeaders).toHaveBeenCalledWith('basketball/nba', makeGame().id);
     expect(mockEspn.fetchMlbBoxscore).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ['basketball/nba', 'fetchGameLeaders'],
+    ['baseball/mlb', 'fetchMlbBoxscore'],
+  ] as const)('shows the "no stats" message when %s stats fail to load', async (sport, method) => {
+    mockEspn[method].mockRejectedValue(new Error('HTTP 500'));
+    fixture.componentRef.setInput('game', makeGame());
+    fixture.componentRef.setInput('sport', sport);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(fixture.componentInstance.leaders()).toEqual([]);
+    expect(fixture.componentInstance.isLoading()).toBe(false);
+    expect(el.querySelector('.no-stats')?.textContent).toContain('No player stats available');
+  });
 });

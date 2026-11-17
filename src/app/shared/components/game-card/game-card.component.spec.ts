@@ -41,6 +41,14 @@ describe('GameCardComponent', () => {
     expect(rows[1].querySelector('.abbr')?.textContent).toBe('8NYY');
   });
 
+  it('shows a logo placeholder for a team with no logo', () => {
+    render(makeGame({ awayTeam: { ...makeGame().awayTeam, logo: '' } }));
+    const rows = el().querySelectorAll('.team-row');
+    expect(rows[0].querySelector('img.logo')).toBeNull();
+    expect(rows[0].querySelector('.logo.placeholder')).not.toBeNull();
+    expect(rows[1].querySelector('img.logo')).not.toBeNull();
+  });
+
   it("shows each team's record when ESPN provides one", () => {
     render(makeGame({ homeTeam: { ...makeGame().homeTeam, record: '93-68' } }));
     const rows = el().querySelectorAll('.team-row');

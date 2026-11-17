@@ -179,4 +179,67 @@ describe('MotorsportPanelComponent', () => {
 
     expect(events).toHaveLength(0);
   });
+
+  // ── Missing data / other series ──────────────────────────────────────────
+
+  it.each([
+    ['racing/nascar-premier', 'NASCAR'],
+    ['racing/irl', 'IndyCar'],
+    ['racing/unknown', 'Racing'],
+  ] as const)('labels the %s series as %s', (sport, label) => {
+    fixture.componentRef.setInput('series', { ...f1, sport } as SeriesConfig);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.sport-badge')?.textContent).toBe(label);
+  });
+
+  it('shows the LIVE badge, live label and start time for a race in progress', () => {
+    fixture.componentRef.setInput('series', f1);
+    fixture.componentRef.setInput('race', makeRace({ status: { state: 'in', description: 'In Progress', detail: 'Lap 12' } }));
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.result-badge.live')).not.toBeNull();
+    expect(el.querySelector('.race-state-label')?.textContent?.trim()).toBe('🔴 LIVE');
+    expect(el.querySelector('.race-state-label')?.classList.contains('live')).toBe(true);
+    expect(el.querySelector('.race-time')).not.toBeNull();
+    expect(fixture.componentInstance.isClickable()).toBe(false);
+  });
+
+  it('shows an empty state label when ESPN sends an unknown race state', () => {
+    fixture.componentRef.setInput('series', f1);
+    fixture.componentRef.setInput('race', makeRace({
+      status: { state: 'postponed' as never, description: 'Postponed', detail: 'Postponed' },
+    }));
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.race-state-label')?.textContent?.trim()).toBe('');
+  });
+
+  it('omits venue, broadcast and winner team when the race is missing them', () => {
+    fixture.componentRef.setInput('series', f1);
+    fixture.componentRef.setInput('race', makeRace({
+      venue: undefined,
+      broadcast: undefined,
+    }));
+    fixture.detectChanges();
+    let el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.race-venue')).toBeNull();
+    expect(el.querySelector('.broadcast')).toBeNull();
+
+    fixture.componentRef.setInput('race', makeRace({
+      status: { state: 'post', description: 'Final', detail: 'Final' },
+      winner: { driverName: 'Lando Norris' } as never,
+    }));
+    fixture.detectChanges();
+    el = fixture.nativeElement;
+    expect(el.querySelector('.winner-name')?.textContent?.trim()).toBe('Lando Norris');
+    expect(el.querySelector('.winner-team')).toBeNull();
+  });
+
+  it('shows no winner block for a finished race with no winner', () => {
+    fixture.componentRef.setInput('series', f1);
+    fixture.componentRef.setInput('race', makeRace({ status: { state: 'post', description: 'Final', detail: 'Final' } }));
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.winner-block')).toBeNull();
+    expect(el.querySelector('.race-date')).not.toBeNull();
+  });
 });
