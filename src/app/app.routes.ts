@@ -43,4 +43,5 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/news/news.component').then((m) => m.NewsComponent),
   },
+  { path: '**', redirectTo: 'today' },
 ];
