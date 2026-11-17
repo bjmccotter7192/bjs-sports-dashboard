@@ -31,7 +31,7 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npx ng test --watch=false
+        run: npx ng test --watch=false --configuration=coverage
 
       - name: Build
         run: npx ng build --base-href /bjs-sports-dashboard/
