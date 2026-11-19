@@ -9,7 +9,7 @@ import { ZonedStyle, formatInZone } from '../../core/config/time-zones';
 @Pipe({ name: 'zonedTime' })
 export class ZonedTimePipe implements PipeTransform {
   transform(value: Date | null | undefined, zone: string, style: ZonedStyle = 'dateTime'): string {
-    if (!value) return '';
+    if (!value || Number.isNaN(value.getTime())) return '';
     return formatInZone(value, zone, style);
   }
 }

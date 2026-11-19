@@ -496,4 +496,75 @@ describe('TeamPanelComponent', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.game-date')?.textContent?.trim()).toBe('Jun 22 · 4:05 PM PT');
   });
+
+  // ── Missing data ─────────────────────────────────────────────────────────
+
+  it('reports no side, team or opponent when there is no game', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.detectChanges();
+    const c = fixture.componentInstance;
+    expect(c.myTeamSide()).toBeNull();
+    expect(c.myTeam()).toBeNull();
+    expect(c.opponent()).toBeNull();
+  });
+
+  it('puts my team on the left with "@" when it is the away side', () => {
+    const base = makeGame();
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({
+      awayTeam: { ...base.awayTeam, id: '18', abbreviation: 'NY', score: '101' },
+      homeTeam: { ...base.homeTeam, abbreviation: 'BOS', score: '99' },
+    }));
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.at-vs')?.textContent).toBe('@');
+    expect(el.querySelector('.my-team .team-abbr')?.textContent?.trim()).toBe('NY');
+    expect(el.querySelector('.my-score')?.textContent).toBe('101');
+    expect(el.querySelector('.opp-team .team-abbr')?.textContent?.trim()).toBe('BOS');
+  });
+
+  it("shows my team's poll rank when it is ranked", () => {
+    const base = makeGame();
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({ homeTeam: { ...base.homeTeam, id: '18', rank: 4 } }));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.my-team .team-rank')?.textContent).toBe('#4');
+  });
+
+  it('shows period and clock for a live game in a clock league', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({
+      homeTeam: { ...makeGame().homeTeam, id: '18' },
+      status: { state: 'in', description: 'In Progress', detail: 'Q3', period: 3, clock: '4:22' },
+    }));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.game-status')?.textContent?.replace(/\s+/g, ' ').trim())
+      .toBe('3Q 4:22');
+  });
+
+  it('falls back to the status detail for a live game with no clock yet', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({
+      homeTeam: { ...makeGame().homeTeam, id: '18' },
+      status: { state: 'in', description: 'In Progress', detail: 'Halftime', period: 2 },
+    }));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.game-status')?.textContent?.trim()).toBe('Halftime');
+  });
+
+  it('hides status detail, scores, venue and broadcast for a pre-game with none of them', () => {
+    fixture.componentRef.setInput('team', knicks);
+    fixture.componentRef.setInput('game', makeGame({
+      homeTeam: { ...makeGame().homeTeam, id: '18' },
+      status: { state: 'pre', description: 'Scheduled', detail: '6/22 - 7:05 PM EDT' },
+      venue: undefined,
+      broadcast: undefined,
+    }));
+    fixture.detectChanges();
+    const el: HTMLElement = fixture.nativeElement;
+    expect(el.querySelector('.game-status')?.textContent?.trim()).toBe('');
+    expect(el.querySelector('.score')).toBeNull();
+    expect(el.querySelector('.venue')).toBeNull();
+    expect(el.querySelector('.broadcast')).toBeNull();
+  });
 });

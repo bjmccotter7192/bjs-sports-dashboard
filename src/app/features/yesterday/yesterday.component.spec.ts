@@ -1,11 +1,13 @@
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { By } from '@angular/platform-browser';
 
 import { YesterdayComponent } from './yesterday.component';
 import { EspnService } from '../../core/services/espn.service';
 import { createMockEspnService } from '../../testing/mock-espn.service';
 import { makeGame, makeRace } from '../../testing/test-fixtures';
+import { EspnScoreboardResponse, Tournament } from '../../core/models/game.model';
 import { SAMPLE_CONFIG } from '../../testing/sample-config';
 import { provideDashboardConfig, makeConfig, makeTeamConfig } from '../../testing/dashboard-config';
 
@@ -220,6 +222,148 @@ describe('YesterdayComponent', () => {
     fixture.detectChanges();
     await settle();
     expect(fixture.nativeElement.querySelector('app-empty-config')).toBeNull();
+  });
+
+  // ── Failing ESPN sources ────────────────────────────────────────────────────
+
+  describe('when ESPN sources fail', () => {
+    const OK_BOARD = { events: [{ id: 'ok' }] } as unknown as EspnScoreboardResponse;
+
+    function teamPanel(shortName: string): HTMLElement {
+      const panels = Array.from(fixture.nativeElement.querySelectorAll('app-team-panel')) as HTMLElement[];
+      const panel = panels.find(p => p.querySelector('.team-name')?.textContent?.trim() === shortName);
+      expect(panel).toBeDefined();
+      return panel!;
+    }
+
+    function seriesPanel(shortName: string): HTMLElement {
+      const panels = Array.from(fixture.nativeElement.querySelectorAll('app-motorsport-panel')) as HTMLElement[];
+      const panel = panels.find(p => p.querySelector('.series-name')?.textContent?.trim() === shortName);
+      expect(panel).toBeDefined();
+      return panel!;
+    }
+
+    it('still renders every other team when one team schedule rejects, and the failed team shows no game', async () => {
+      mockEspn.getTeamSchedule.mockImplementation((_sport: string, id: string) =>
+        id === '18' ? Promise.reject(new Error('ESPN 500')) : Promise.resolve(OK_BOARD));
+      mockEspn.findLastPlayedGame.mockImplementation((board: unknown) => board === OK_BOARD ? makeGame() : null);
+
+      fixture.detectChanges();
+      await settle();
+
+      expect(fixture.nativeElement.querySelectorAll('app-team-panel').length).toBe(SAMPLE_CONFIG.teams.length);
+      expect(teamPanel('Knicks').querySelector('.no-game')).not.toBeNull();
+      for (const name of ['Yankees', 'Nationals', 'Giants', 'Rangers']) {
+        expect(teamPanel(name).querySelector('.no-game')).toBeNull();
+      }
+      expect(component.inactiveTeamPanels().map(e => e.team.shortName)).toEqual(['Knicks']);
+    });
+
+    it('still renders the other series when one motorsport scoreboard rejects, and the failed one shows no race', async () => {
+      mockEspn.getScoreboard.mockImplementation((sport: string) =>
+        sport === 'racing/f1' ? Promise.reject(new Error('ESPN 500')) : Promise.resolve(OK_BOARD));
+      mockEspn.findLastRace.mockImplementation((board: unknown) => board === OK_BOARD ? makeRace() : null);
+
+      fixture.detectChanges();
+      await settle();
+
+      expect(seriesPanel('F1').querySelector('.no-race')).not.toBeNull();
+      expect(seriesPanel('NASCAR').querySelector('.no-race')).toBeNull();
+      expect(seriesPanel('IndyCar').querySelector('.no-race')).toBeNull();
+    });
+
+    it('renders every panel in its empty state without throwing when every source rejects', async () => {
+      mockEspn.getTeamSchedule.mockRejectedValue(new Error('ESPN down'));
+      mockEspn.getScoreboard.mockRejectedValue(new Error('ESPN down'));
+
+      fixture.detectChanges();
+      await settle();
+      expect(() => fixture.detectChanges()).not.toThrow();
+
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelectorAll('app-team-panel .no-game').length).toBe(SAMPLE_CONFIG.teams.length);
+      expect(el.querySelectorAll('app-motorsport-panel .no-race').length).toBe(SAMPLE_CONFIG.series.length);
+      expect(el.querySelectorAll('app-golf-panel .no-data').length).toBe(SAMPLE_CONFIG.golf.length);
+      expect(el.querySelector('app-empty-config')).toBeNull();
+    });
+  });
+
+  // ── Panel clicks open stats modals ──────────────────────────────────────────
+
+  describe('panel clicks', () => {
+    function click(selector: string) {
+      const target: HTMLElement | null = fixture.nativeElement.querySelector(selector);
+      expect(target).not.toBeNull();
+      target!.click();
+      fixture.detectChanges();
+    }
+
+    it('opens the game stats modal when a team panel with a game is clicked, and closes it on close', async () => {
+      const game = makeGame({ id: 'clicked-game' });
+      mockEspn.findLastPlayedGame.mockImplementation((_board: unknown, id: string) => id === '10' ? game : null);
+      fixture.detectChanges();
+      await settle();
+
+      expect(fixture.nativeElement.querySelector('app-game-stats-modal')).toBeNull();
+      click('app-team-panel .panel');
+      expect(fixture.nativeElement.querySelector('app-game-stats-modal')).not.toBeNull();
+      expect(component.selectedGame()).toEqual({ game, sport: 'baseball/mlb' });
+
+      click('app-game-stats-modal .close-btn');
+      expect(fixture.nativeElement.querySelector('app-game-stats-modal')).toBeNull();
+      expect(component.selectedGame()).toBeNull();
+    });
+
+    it('opens the game stats modal when a team panel below golf and motorsport emits a click', async () => {
+      fixture.detectChanges();
+      await settle();
+
+      const panels = fixture.debugElement.queryAll(By.css('app-team-panel'));
+      const game = makeGame({ id: 'inactive-click' });
+      panels[panels.length - 1].triggerEventHandler('panelClick', { game, sport: 'hockey/nhl' });
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-game-stats-modal')).not.toBeNull();
+      expect(component.selectedGame()).toEqual({ game, sport: 'hockey/nhl' });
+    });
+
+    it('opens the race stats modal when a finished race panel is clicked, and closes it on close', async () => {
+      const race = makeRace({ id: 'clicked-race', status: { state: 'post', description: 'Final', detail: 'Final' } });
+      mockEspn.findLastRace.mockReturnValue(race);
+      fixture.detectChanges();
+      await settle();
+
+      expect(fixture.nativeElement.querySelector('app-race-stats-modal')).toBeNull();
+      click('app-motorsport-panel .panel');
+      expect(fixture.nativeElement.querySelector('app-race-stats-modal')).not.toBeNull();
+      expect(component.selectedRace()?.race).toBe(race);
+
+      click('app-race-stats-modal .close-btn');
+      expect(fixture.nativeElement.querySelector('app-race-stats-modal')).toBeNull();
+      expect(component.selectedRace()).toBeNull();
+    });
+
+    it('opens the tournament stats modal when a finished golf panel is clicked, and closes it on close', async () => {
+      const tournament: Tournament = {
+        id: 'clicked-tournament',
+        name: 'The Memorial Tournament',
+        shortName: 'Memorial',
+        startDate: new Date('2026-06-04T12:00Z'),
+        status: { state: 'post', detail: 'Final' },
+      };
+      mockEspn.findLastTournament.mockReturnValue(tournament);
+      fixture.detectChanges();
+      await settle();
+
+      expect(fixture.nativeElement.querySelector('app-tournament-stats-modal')).toBeNull();
+      click('app-golf-panel .panel');
+      expect(fixture.nativeElement.querySelector('app-tournament-stats-modal')).not.toBeNull();
+      expect(component.selectedTournament()).toBe(tournament);
+
+      click('app-tournament-stats-modal .close-btn');
+      expect(fixture.nativeElement.querySelector('app-tournament-stats-modal')).toBeNull();
+      expect(component.selectedTournament()).toBeNull();
+    });
   });
 
   // ── Custom config ───────────────────────────────────────────────────────────

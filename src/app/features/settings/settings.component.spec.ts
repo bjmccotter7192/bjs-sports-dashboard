@@ -45,12 +45,22 @@ describe('SettingsComponent', () => {
     await settle();
   }
 
+  let originalClipboard: PropertyDescriptor | undefined;
+
   beforeEach(() => {
     localStorage.clear();
     mockEspn = createMockEspnService();
+    originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    if (originalClipboard) {
+      Object.defineProperty(navigator, 'clipboard', originalClipboard);
+    } else {
+      delete (navigator as { clipboard?: Clipboard }).clipboard;
+    }
+  });
 
   // ── Dashboard name ──────────────────────────────────────────────────────────
 
@@ -229,5 +239,119 @@ describe('SettingsComponent', () => {
     confirmSpy.mockReturnValue(true);
     component.clearAll();
     expect(store.isEmpty()).toBe(true);
+  });
+
+  // ── Coverage: failure paths and uncovered controls ─────────────────────────
+
+  it('shows "Couldn\'t load teams" with no options when the team list fails to load', async () => {
+    mockEspn.getTeams.mockRejectedValue(new Error('500'));
+    await create();
+    expect(el().querySelector('.hint.error')?.textContent).toContain("Couldn't load teams from ESPN");
+    expect(component.filteredOptions()).toEqual([]);
+    expect(el().querySelector('.option')).toBeNull();
+  });
+
+  it('survives a team-colors failure when adding from the picker UI', async () => {
+    mockEspn.getTeams.mockResolvedValue([option({ espnId: '18', name: 'New York Knicks', primaryColor: '#666666' })]);
+    mockEspn.getTeamColors.mockRejectedValue(new Error('500'));
+    await create();
+    el().querySelector<HTMLButtonElement>('.option')!.click();
+    await vi.waitFor(() => expect(store.config().teams).toHaveLength(1));
+    fixture.detectChanges();
+    expect(el().querySelector('.team-row .team-name')?.textContent).toContain('New York Knicks');
+    expect(el().querySelector('.option .added')?.textContent).toBe('Added');
+    expect(el().querySelector('.hint.error')).toBeNull();
+  });
+
+  it('shows "Adding…" on the option while its colors are being fetched', async () => {
+    let resolveColors!: (c: unknown) => void;
+    mockEspn.getTeams.mockResolvedValue([option({ espnId: '18' })]);
+    mockEspn.getTeamColors.mockReturnValue(new Promise(r => (resolveColors = r)));
+    await create();
+    el().querySelector<HTMLButtonElement>('.option')!.click();
+    fixture.detectChanges();
+    expect(el().querySelector('.option .added')?.textContent).toBe('Adding…');
+    expect(el().querySelector<HTMLButtonElement>('.option')!.disabled).toBe(true);
+    resolveColors(null);
+    await vi.waitFor(() => expect(store.config().teams).toHaveLength(1));
+  });
+
+  it('renders the team logo when ESPN provides one', async () => {
+    mockEspn.getTeams.mockResolvedValue([
+      { config: makeTeamConfig({ espnId: '18' }), logo: 'https://a.espncdn.com/knicks.png' },
+      option({ espnId: '1' }),
+    ]);
+    await create();
+    const logos = el().querySelectorAll<HTMLImageElement>('.option img.option-logo');
+    expect(logos.length).toBe(1);
+    expect(logos[0].getAttribute('src')).toBe('https://a.espncdn.com/knicks.png');
+  });
+
+  it('filters the option list as you type in the search box and says when nothing matches', async () => {
+    mockEspn.getTeams.mockResolvedValue([
+      option({ espnId: '1', name: 'Boston Celtics', abbreviation: 'BOS' }),
+      option({ espnId: '18', name: 'New York Knicks', abbreviation: 'NY' }),
+    ]);
+    await create();
+    const search = el().querySelector<HTMLInputElement>('input[type="search"]')!;
+    search.value = 'celt';
+    search.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect([...el().querySelectorAll('.option-name')].map(n => n.textContent)).toEqual(['Boston Celtics']);
+
+    search.value = 'zzz';
+    search.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(el().querySelector('.option')).toBeNull();
+    expect(el().querySelector('.option-list')?.textContent).toContain('No teams match "zzz"');
+  });
+
+  it('moves a team down with its ↓ button', async () => {
+    const a = makeTeamConfig({ espnId: '1', shortName: 'A' });
+    const b = makeTeamConfig({ espnId: '2', shortName: 'B' });
+    await create(makeConfig({ teams: [a, b] }));
+    el().querySelector<HTMLButtonElement>('[aria-label="Move A down"]')!.click();
+    await settle();
+    expect(store.config().teams.map(t => t.shortName)).toEqual(['B', 'A']);
+  });
+
+  it('copies the share link from the button, shows "Copied!" and selects the link on focus', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    await create(makeConfig({ teams: [makeTeamConfig()] }));
+    const shareBtn = [...el().querySelectorAll<HTMLButtonElement>('.action-btn')].find(b => b.textContent?.includes('Copy share link'))!;
+    expect(shareBtn.disabled).toBe(false);
+    shareBtn.click();
+    await vi.waitFor(() => expect(component.copied()).toBe(true));
+    fixture.detectChanges();
+    expect(el().querySelector('.share-row .status')?.textContent).toBe('Copied!');
+
+    const input = el().querySelector<HTMLInputElement>('.share-url')!;
+    expect(writeText).toHaveBeenCalledWith(input.value);
+    const select = vi.spyOn(input, 'select');
+    input.dispatchEvent(new Event('focus'));
+    expect(select).toHaveBeenCalled();
+  });
+
+  it('disables the share and remove buttons when the dashboard is empty', async () => {
+    await create();
+    const buttons = [...el().querySelectorAll<HTMLButtonElement>('.action-btn')];
+    expect(buttons.map(b => b.disabled)).toEqual([true, true]);
+  });
+
+  it('removes everything and hides the share link from the "Remove everything" button', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn().mockResolvedValue(undefined) }, configurable: true });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    await create(makeConfig({ teams: [makeTeamConfig()] }));
+    await component.share();
+    await settle();
+    expect(el().querySelector('.share-url')).not.toBeNull();
+
+    el().querySelector<HTMLButtonElement>('.action-btn.danger')!.click();
+    await settle();
+    expect(window.confirm).toHaveBeenCalled();
+    expect(store.isEmpty()).toBe(true);
+    expect(el().querySelector('.share-url')).toBeNull();
+    expect(el().querySelector('.team-list')).toBeNull();
   });
 });

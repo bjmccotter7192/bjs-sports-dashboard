@@ -6,7 +6,7 @@ import { ImportComponent } from './import.component';
 import { EspnService } from '../../core/services/espn.service';
 import { CONFIG_STORAGE_KEY, DashboardConfigService } from '../../core/services/dashboard-config.service';
 import { encodeShareCode, serializeConfig } from '../../core/config/config-validation';
-import { SERIES_OPTIONS } from '../../core/config/leagues.config';
+import { GOLF_OPTIONS, SERIES_OPTIONS } from '../../core/config/leagues.config';
 import { createMockEspnService } from '../../testing/mock-espn.service';
 import { makeConfig, makeTeamConfig } from '../../testing/dashboard-config';
 import { SportLeague, TeamOption } from '../../core/models/team-config.model';
@@ -114,5 +114,38 @@ describe('ImportComponent', () => {
   it('does not change the dashboard until applied', async () => {
     await create(encodeShareCode(makeConfig({ teams: [makeTeamConfig()] })));
     expect(store.isEmpty()).toBe(true);
+  });
+
+  // ── Coverage: failure paths ─────────────────────────────────────────────────
+
+  it('skips teams whose name lookup fails but still imports the rest of the link', async () => {
+    mockEspn.getTeams.mockRejectedValue(new Error('500'));
+    await create(encodeShareCode(makeConfig({ teams: [makeTeamConfig()], golf: [GOLF_OPTIONS[0]] })));
+    expect(component.preview()!.config.teams).toEqual([]);
+    expect(component.preview()!.missing).toBe(1);
+    expect(el().querySelector('.preview-list')?.textContent).toContain('PGA Tour');
+    expect(el().textContent).toContain("1 team(s) in this link couldn't be found");
+  });
+
+  it('shows the not-found error when the only team\'s name lookup fails', async () => {
+    mockEspn.getTeams.mockRejectedValue(new Error('network'));
+    await create(encodeShareCode(makeConfig({ teams: [makeTeamConfig()] })));
+    expect(el().querySelector('.error')?.textContent).toContain('could be found on ESPN');
+    expect(el().querySelector('.action-btn.primary')).toBeNull();
+  });
+
+  it('does nothing when applied with nothing to import', async () => {
+    mockEspn.getTeams.mockRejectedValue(new Error('500'));
+    await create(encodeShareCode(makeConfig({ teams: [makeTeamConfig()] })), makeConfig({ teams: [makeTeamConfig({ espnId: '42' })] }));
+    component.apply();
+    expect(store.config().teams.map(t => t.espnId)).toEqual(['42']);
+    expect(TestBed.inject(Router).navigate).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when applied with an invalid link', async () => {
+    await create('not-a-code', makeConfig({ teams: [makeTeamConfig({ espnId: '42' })] }));
+    component.apply();
+    expect(store.config().teams.map(t => t.espnId)).toEqual(['42']);
+    expect(TestBed.inject(Router).navigate).not.toHaveBeenCalled();
   });
 });

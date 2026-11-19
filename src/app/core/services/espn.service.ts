@@ -188,8 +188,8 @@ export class EspnService {
 
   parseGame(event: EspnEvent): Game {
     const competition = event.competitions[0];
-    const home = competition.competitors.find((c) => c.homeAway === 'home')!;
-    const away = competition.competitors.find((c) => c.homeAway === 'away')!;
+    const home = competition.competitors.find((c) => c.homeAway === 'home');
+    const away = competition.competitors.find((c) => c.homeAway === 'away');
 
     return {
       id: event.id,
@@ -214,7 +214,7 @@ export class EspnService {
     const data = await firstValueFrom(
       this.http.get<any>(`${this.baseUrl}/${sport}/summary`, { params: { event: eventId } })
     );
-    return this.parseSummaryLeaders(data.leaders ?? []);
+    return this.parseSummaryLeaders(data?.leaders ?? []);
   }
 
   /** Fetch MLB boxscore — returns top batters per team + starting pitchers */
@@ -222,7 +222,7 @@ export class EspnService {
     const data = await firstValueFrom(
       this.http.get<any>(`${this.baseUrl}/baseball/mlb/summary`, { params: { event: eventId } })
     );
-    return this.parseMlbBoxscore(data.boxscore?.players ?? []);
+    return this.parseMlbBoxscore(data?.boxscore?.players ?? []);
   }
 
   private parseMlbBoxscore(teamGroups: any[]): StatCategory[] {
@@ -358,17 +358,18 @@ export class EspnService {
     });
   }
 
-  private parseTeam(competitor: EspnCompetitor): GameTeam {
-    const record = overallRecord(competitor.records);
-    const rank = pollRank(competitor.curatedRank);
+  /** A missing competitor (e.g. opponent TBD) yields empty placeholders. */
+  private parseTeam(competitor: EspnCompetitor | undefined): GameTeam {
+    const record = overallRecord(competitor?.records);
+    const rank = pollRank(competitor?.curatedRank);
     return {
-      id: competitor.team?.id ?? '',
-      abbreviation: competitor.team?.abbreviation ?? '',
-      displayName: competitor.team?.displayName ?? '',
-      logo: competitor.team?.logo ?? '',
-      score: competitor.score ?? '',
-      isWinner: competitor.winner ?? false,
-      primaryColor: competitor.team?.color ? `#${competitor.team.color}` : '#666',
+      id: competitor?.team?.id ?? '',
+      abbreviation: competitor?.team?.abbreviation ?? '',
+      displayName: competitor?.team?.displayName ?? '',
+      logo: competitor?.team?.logo ?? '',
+      score: competitor?.score ?? '',
+      isWinner: competitor?.winner ?? false,
+      primaryColor: competitor?.team?.color ? `#${competitor.team.color}` : '#666',
       ...(record ? { record } : {}),
       ...(rank ? { rank } : {}),
     };
@@ -664,7 +665,7 @@ export class EspnService {
         url, { params: { limit: limit.toString() } }
       )
     );
-    return (data.articles ?? data.feed ?? []).map(a =>
+    return (data?.articles ?? data?.feed ?? []).map(a =>
       this.parseNewsArticle(a, sourceName, sourceColor)
     );
   }

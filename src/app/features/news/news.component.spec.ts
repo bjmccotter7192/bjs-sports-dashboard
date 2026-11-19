@@ -225,6 +225,61 @@ describe('NewsComponent', () => {
     expect(component.timeAgo(threeHoursAgo)).toBe('3h ago');
   });
 
+  it('timeAgo returns "yesterday" for one day ago and "Nd ago" beyond that', () => {
+    expect(component.timeAgo(new Date(Date.now() - 30 * 60 * 60 * 1000))).toBe('yesterday');
+    expect(component.timeAgo(new Date(Date.now() - 3 * 24 * 60 * 60 * 1000))).toBe('3d ago');
+  });
+
+  // ── Missing image ───────────────────────────────────────────────────────────
+
+  it('renders a placeholder instead of an image for an article without one', async () => {
+    mockEspn.getNews.mockResolvedValueOnce([makeArticle({ id: 'no-img', image: undefined })]).mockResolvedValue([]);
+
+    fixture.detectChanges();
+    await settle();
+
+    const card: HTMLElement = fixture.nativeElement.querySelector('.news-card');
+    expect(card.querySelector('.card-image--placeholder')).not.toBeNull();
+    expect(card.querySelector('img')).toBeNull();
+  });
+
+  // ── API failures ────────────────────────────────────────────────────────────
+
+  it("still lists the other leagues' articles when one league's feed rejects, and the filter still works", async () => {
+    const nba = makeArticle({ id: 'n1', sourceName: 'NBA' });
+    const mlb = makeArticle({ id: 'm1', sourceName: 'MLB' });
+    mockEspn.getNews
+      .mockResolvedValueOnce([nba])
+      .mockRejectedValueOnce(new Error('500'))
+      .mockResolvedValueOnce([mlb])
+      .mockResolvedValue([]);
+
+    fixture.detectChanges();
+    await settle();
+
+    expect(fixture.nativeElement.querySelectorAll('.news-card').length).toBe(2);
+    expect(fixture.nativeElement.querySelector('.empty-state')).toBeNull();
+
+    const buttons: HTMLButtonElement[] = [...fixture.nativeElement.querySelectorAll('.filter-btn')];
+    buttons.find(b => b.textContent?.trim() === 'MLB')!.click();
+    fixture.detectChanges();
+
+    const cards: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('.news-card');
+    expect(cards.length).toBe(1);
+    expect(cards[0].querySelector('.source-badge')?.textContent).toBe('MLB');
+  });
+
+  it('shows the empty state (not a stuck skeleton) when every feed rejects', async () => {
+    mockEspn.getNews.mockRejectedValue(new Error('500'));
+
+    fixture.detectChanges();
+    await settle();
+
+    expect(fixture.nativeElement.querySelector('.skeleton-card')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.empty-state')?.textContent).toContain('No articles found.');
+    expect(fixture.nativeElement.querySelectorAll('.filter-btn').length).toBe(1 + SOURCE_COUNT);
+  });
+
   // ── Custom config ───────────────────────────────────────────────────────────
 
   describe('with a custom config', () => {
